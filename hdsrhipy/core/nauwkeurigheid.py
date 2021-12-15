@@ -21,11 +21,12 @@ import random
 
 from hdsrhipy import Groundwater
 from hdsrhipy import Maatgevend
+from hdsrhipy import Runoff
 
 def bootstrap(data, nyear=None, n=3):
     if nyear is None:
         nyear = 8
-    if 'time' in data:
+    if hasattr(data,'time'):
         time = [pd.Timestamp(data['time'].values[i]).year for i in range(len(data['time']))]            
     else:
         time  = [pd.Timestamp(data.iloc[i,0]).year for i in range(len(data.iloc[:,0]))]  
@@ -45,7 +46,7 @@ def bootstrap(data, nyear=None, n=3):
                     outdat = outdat.append(data.iloc[outinds,:])
             else: 
                 raise TypeError('A 2D or 3D array is required.')         
-        if 'time' in data:
+        if hasattr(data,'time'):
             outdat = xr.concat(datlist,'time')
         #else:
         #    outdat.iloc[:,0] = data.iloc[:,0]
@@ -56,11 +57,11 @@ def sample_nauwkeurigheid(data, bandbreedte, n=3):
     samples = []
     for i in tqdm(range(n)):
         if len(data.shape)==3:
-            noise = (bandbreedte * -1) + np.random.rand(data.shape[0], data.shape[1], data.shape[2])*(bandbreedte*2)    
+            noise = bandbreedte[0] + np.random.rand(data.shape[0], data.shape[1], data.shape[2])*(bandbreedte[1]-bandbreedte[0])    
             samples.append(data+noise)
         elif len(data.shape)==2:
             temp = data.iloc[:,1:]
-            noise = pd.DataFrame((bandbreedte * -1) + np.random.rand(temp.shape[0], temp.shape[1])*(bandbreedte*2), columns=temp.columns, index=temp.index)
+            noise = pd.DataFrame(bandbreedte[0] + np.random.rand(temp.shape[0], temp.shape[1])*(bandbreedte[1]-bandbreedte[0]), columns=temp.columns, index=temp.index)
             sumt = temp.add(noise)
             temp2 = data.copy(deep=True)
             temp2.iloc[:,1:] = sumt
@@ -77,6 +78,7 @@ def MonteCarlo(variable, samples, bootstrap_n=3, n=3):
     
     gw = Groundwater()
     mg = Maatgevend()
+    r = Runoff()
     
     reslist = []
     for i in tqdm(range(n)):
@@ -94,12 +96,18 @@ def MonteCarlo(variable, samples, bootstrap_n=3, n=3):
                 refda = gw.seepage_season_means(dataset=j)[0]           
             elif variable == 'normative':
                 reslist.append(mg.get_q_norm(j))
-                #print(np.nanmin(j), np.nanmean(j), np.nanmax(j))            
+            elif variable == 'metaswap_mean':
+                reslist.append(r.get_season_stat(dataset=j,stat='mean'))
+                refda = r.get_season_stat(dataset=j,stat='mean')[0]       
+            elif variable == 'metaswap_min':
+                reslist.append(r.get_season_stat(dataset=j,stat='min'))
+                refda = r.get_season_stat(dataset=j,stat='min')[0]       
             
+           
     mins = []
     maxs = []
     if variable =='seepage':
-        for s in range(4):
+        for s in range(6):
             print(f'Get min/max for season {s+1}')
             # make a list of rasters for this season
             sublist = np.dstack([sub[s] for sub in reslist])
@@ -124,4 +132,12 @@ def MonteCarlo(variable, samples, bootstrap_n=3, n=3):
         maxs.append(makeds(np.amax(sublistgt,axis=2), refda))
     elif variable=='normative':
         print(len(reslist))
+    elif variable.startswith('metaswap'):
+        for s in range(2):
+            print(f'Get min/max for season {s+1}')
+            # make a list of rasters for this season
+            sublist = np.dstack([sub[s] for sub in reslist])
+            mins.append(makeds(np.amin(sublist,axis=2), refda)) 
+            maxs.append(makeds(np.amax(sublist,axis=2), refda))          
+       
     return (mins,maxs)    

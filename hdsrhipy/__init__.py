@@ -12,5 +12,6 @@ from hdsrhipy.model.runfile import Runfile
 from hdsrhipy.model.hydromedah import Hydromedah
 from hdsrhipy.groundwater.groundwater import Groundwater
 from hdsrhipy.surfacewater.maatgevend import Maatgevend
+from hdsrhipy.runoff.runoff import Runoff
 from hdsrhipy.core.logging import initialize_logger
 initialize_logger()

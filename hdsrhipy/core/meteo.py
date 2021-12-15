@@ -117,7 +117,9 @@ class Meteorology:
         api_url = "https://api.dataplatform.knmi.nl/open-data"
         
         if api_key is None: 
-            api_key = self.select_key(dataset_name)
+            #api_key = self.select_key(dataset_name)
+            # open data key:
+            api_key = 'eyJvcmciOiI1ZTU1NGUxOTI3NGE5NjAwMDEyYTNlYjEiLCJpZCI6ImNjOWE2YjM3ZjVhODQwMDZiMWIzZGIzZDRjYzVjODFiIiwiaCI6Im11cm11cjEyOCJ9'
         if max_keys is None:
             max_keys = 10000
         if start_after is None:

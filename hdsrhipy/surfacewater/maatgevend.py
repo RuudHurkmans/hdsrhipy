@@ -53,28 +53,37 @@ class Maatgevend:
             # take temporal average from seepage and convert it from mm/d to m3/s , like the laterals
             av_seep  =  gw.seepage.mean(dim='time') 
             av_seep.rio.to_raster(os.path.join(self.export_path,'temp.tif'))          
-            sp_per_afw = zonal_stats( self.afw, os.path.join(self.export_path,'temp.tif'),stats='mean', all_touched=True)            
+            sp_per_afw = zonal_stats( self.afw, os.path.join(self.export_path,'temp.tif'),stats='mean', all_touched=True)        
+            seep = [sp_per_afw[int(j)-1]['mean']*self.afw.geometry.area.iloc[int(j)-1] /  (1000. * 86400.) for j in self.laterals.columns]
             for i in tqdm(range(self.laterals_nosp.shape[0]), total=self.laterals_nosp.shape[0]):                 
-                print( 'Processing '+str(i)+' of '+str(self.laterals_nosp.shape[0]))
-                for jj,j in enumerate(self.laterals.columns):
-                    self.laterals_nosp.iloc[i,jj] = self.laterals.iloc[i,jj] - sp_per_afw[int(j)-1]['mean'] * \
-                                                        self.afw.geometry.area.iloc[int(j)-1] / (1000. * 86400.)                        
+                # print( 'Processing '+str(i)+' of '+str(self.laterals_nosp.shape[0]))
+                self.laterals_nosp.iloc[i,:] = self.laterals.iloc[i,:] - seep 
+                # for jj,j in enumerate(self.laterals.columns):
+                #     self.laterals_nosp.iloc[i,jj] = self.laterals.iloc[i,jj] - sp_per_afw[int(j)-1]['mean'] * \
+                #                                         self.afw.geometry.area.iloc[int(j)-1] / (1000. * 86400.)                        
+            self.laterals_nosp.to_csv(os.path.join(self.export_path, '..','Laterals_nosp_av_'+self.name+'.csv'), sep=",")
+  
         else:
             for i in tqdm(range(self.laterals_nosp.shape[0]), total=self.laterals_nosp.shape[0]):        
                 print( 'Processing '+str(i)+' of '+str(self.laterals_nosp.shape[0]))
                 # take temporal average from seepage and convert it from mm/d to m3/s , like the laterals
                 rast = gw.seepage.isel({'time':i})
                 rast.rio.to_raster(os.path.join(self.export_path,'temp.tif'))          
-                sp_per_afw = zonal_stats( self.afw, os.path.join(self.export_path,'temp.tif'),stats='mean', all_touched=True)
-                for jj,j in enumerate(self.laterals.columns):
-                    self.laterals_nosp.iloc[i,jj] = self.laterals.iloc[i,jj] - sp_per_afw[int(j)-1]['mean'] * \
-                                                        self.afw.geometry.area.iloc[int(j)-1] / (1000. * 86400.)                  
+                sp_per_afw = zonal_stcats( self.afw, os.path.join(self.export_path,'temp.tif'),stats='mean', all_touched=True)
+                seep = [sp_per_afw[int(j)-1]['mean']*self.afw.geometry.area.iloc[int(j)-1] /  (1000. * 86400.) for j in self.laterals.columns]
+                self.laterals_nosp.iloc[i,:] = self.laterals.iloc[i,:] - seep 
+                #for jj,j in enumerate(self.laterals.columns):
+                #    self.laterals_nosp.iloc[i,jj] = self.laterals.iloc[i,jj] - sp_per_afw[int(j)-1]['mean'] * \
+                #                                        self.afw.geometry.area.iloc[int(j)-1] / (1000. * 86400.)                  
                                                         
-        self.laterals_nosp.to_csv(os.path.join(self.export_path, '..','Laterals_nosp_'+self.name+'.csv'), sep=",")
+            self.laterals_nosp.to_csv(os.path.join(self.export_path, '..','Laterals_nosp_dyn_'+self.name+'.csv'), sep=",")
         
-    def get_laterals(self, seepage_subtracted=True):       
+    def get_laterals(self, seepage_subtracted=True, mean_seepage=True):       
         if seepage_subtracted:
-            self.laterals_nosp = pd.read_csv(os.path.join(self.export_path,'..','Laterals_nosp_'+self.name+'.csv'), sep=",")
+            if mean_seepage:
+                self.laterals_nosp = pd.read_csv(os.path.join(self.export_path,'..','Laterals_nosp_av_'+self.name+'.csv'), sep=",")
+            else:
+                self.laterals_nosp = pd.read_csv(os.path.join(self.export_path,'..','Laterals_nosp_dyn_'+self.name+'.csv'), sep=",")
             self.laterals_nosp.index = self.laterals_nosp.iloc[:,0] 
             self.laterals_nosp.drop(self.laterals_nosp.columns[0:2], axis=1,inplace=True)            
         else:
@@ -103,7 +112,8 @@ class Maatgevend:
     def plot_location(self, nr, seepage_subtracted = True):             
         afwid = self.afw.loc[self.afw.CODENR==int(nr),'CODE'].to_string(index=False)
         area = float(self.afw.loc[self.afw.CODENR==int(nr),'geometry'].area)
-        factor = area/(1000.*86400.)
+        m3s_to_mmd = area/(1000.*86400.)
+        m3s_to_lsha = area*10000./1000.
         print('Plotting '+afwid)
         ts = self.laterals.loc[:,str(nr)]         
         if seepage_subtracted:
@@ -117,21 +127,21 @@ class Maatgevend:
         if seepage_subtracted:
             axs[0].plot(times, tsc, color='red',label='Aan/afvoer zonder kwel')
         axs[0].plot(times, ts*0., color='black')
-        axs[0].set_ylabel('Af/aanvoer [m3/s]')
+        axs[0].set_ylabel('Af/aanvoer [$\mathregular{m^{3} s^{-1}}$]')
         axs[0].legend(ncol=1)
-        axs[1].plot(range(len(times)), self.process_timeseries(ts)[0].sort_values(ascending=True)/factor,label='Afvoer gesorteerd')
-        axs[1].plot(len(times)-int(1.5*len(years)), self.process_timeseries(ts)[1]/factor, 'bo', label='Maatgevende afvoer')
+        axs[1].plot(range(len(times)), self.process_timeseries(ts)[0].sort_values(ascending=True)/m3s_to_lsha,label='Afvoer gesorteerd')
+        axs[1].plot(len(times)-int(1.5*len(years)), self.process_timeseries(ts)[1]/m3s_to_lsha, 'bo', label='Maatgevende afvoer')
         if seepage_subtracted:
-            axs[1].plot(range(len(times)), self.process_timeseries(tsc)[0].sort_values(ascending=True)/factor,linestyle='dashed', color='blue',label='Afvoer gesorteerd zonder kwel')
-            axs[1].plot(len(times)-int(1.5*len(years)), self.process_timeseries(tsc)[1]/factor, 'bs', label='Maatgevende afvoer zonder kwel')                    
+            axs[1].plot(range(len(times)), self.process_timeseries(tsc)[0].sort_values(ascending=True)/m3s_to_lsha,linestyle='dashed', color='blue',label='Afvoer gesorteerd zonder kwel')
+            axs[1].plot(len(times)-int(1.5*len(years)), self.process_timeseries(tsc)[1]/m3s_to_lsha, 'bs', label='Maatgevende afvoer zonder kwel')                    
         axs[1].legend(ncol=1)
-        axs[1].set_ylabel('Afvoer [mm/d]')        
-        axs[2].plot(range(len(times)),self.process_timeseries(ts)[2].sort_values(ascending=True)/factor,color='red',label='Aanvoer gesorteerd')
-        axs[2].plot(len(times)-int(0.1*len(years)), self.process_timeseries(ts)[3]/factor, 'o',color='red', label='Maatgevende aanvoer')
+        axs[1].set_ylabel('Afvoer [$\mathregular{l s^{-1} ha^{-1}}$]')
+        axs[2].plot(range(len(times)),self.process_timeseries(ts)[2].sort_values(ascending=True)/m3s_to_lsha,color='red',label='Aanvoer gesorteerd')
+        axs[2].plot(len(times)-int(0.1*len(years)), self.process_timeseries(ts)[3]/m3s_to_lsha, 'o',color='red', label='Maatgevende aanvoer')
         if seepage_subtracted:
-            axs[2].plot(range(len(times)),self.process_timeseries(tsc)[2].sort_values(ascending=True)/factor,linestyle='dashed',color='red',label='Aanvoer gesorteerd zonder kwel')
-            axs[2].plot(len(times)-int(0.1*len(years)), self.process_timeseries(tsc)[3]/factor, 's',color='red', label='Maatgevende aanvoer zonder kwel')        
-        axs[2].set_ylabel('Aanvoer [mm/d]')
+            axs[2].plot(range(len(times)),self.process_timeseries(tsc)[2].sort_values(ascending=True)/m3s_to_lsha,linestyle='dashed',color='red',label='Aanvoer gesorteerd zonder kwel')
+            axs[2].plot(len(times)-int(0.1*len(years)), self.process_timeseries(tsc)[3]/m3s_to_lsha, 's',color='red', label='Maatgevende aanvoer zonder kwel')        
+        axs[2].set_ylabel('Aanvoer [$\mathregular{l s^{-1} ha^{-1}}$]')
         axs[2].legend(ncol=1)
         plt.savefig(os.path.join(self.export_path, 'MG_'+afwid+'_'+self.name+'.png'))
                    
@@ -142,20 +152,22 @@ class Maatgevend:
             if k not in keep:
                 mg_q.drop([k],axis=1,inplace=True) 
         mg_q['MQAF_M3S'] = np.nan
-        mg_q['MQAF_MMD'] = np.nan
+        mg_q['MQAF_LSHA'] = np.nan
         mg_q['MQAAN_M3S'] = np.nan
-        mg_q['MQAAN_MMD'] = np.nan
+        mg_q['MQAAN_LSHA'] = np.nan
         mg_q.index = self.afw.index
+        m3s_to_mmd = area/(1000.*86400.)
+        m3s_to_lsha = area*10000./1000.
         #%%
         for ind,i in self.afw.iterrows():
             if str(i.CODENR) in dataset.columns.to_list():        
                 ts = dataset.loc[:,str(i.CODENR)]                        
                 (_,mqaf, _, mqaan) = self.process_timeseries(ts)                                
                 mg_q.loc[mg_q['CODENR']==i.CODENR, 'MQAF_M3S'] = mqaf
-                mg_q.loc[mg_q['CODENR']==i.CODENR, 'MQAF_MMD'] = (mqaf / i.geometry.area)*1e3*86400.                              
+                mg_q.loc[mg_q['CODENR']==i.CODENR, 'MQAF_LSHA'] = mqaf/m3s_to_lsha
             
                 mg_q.loc[mg_q['CODENR']==i.CODENR, 'MQAAN_M3S'] = mqaan
-                mg_q.loc[mg_q['CODENR']==i.CODENR, 'MQAAN_MMD'] = (mqaan / i.geometry.area)*1e3*86400.        
+                mg_q.loc[mg_q['CODENR']==i.CODENR, 'MQAAN_LSHA'] = mqaan/m3s_to_lsha
         return mg_q
         
     def export_shp(self, dataset, filename):
