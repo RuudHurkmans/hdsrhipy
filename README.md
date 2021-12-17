@@ -16,9 +16,7 @@ https://github.com/RuudHurkmans/hdsrhipy/blob/master/environment.yml
 
 En kopieer de inhoud naar een lokaal bestand, eveneens genaamd ‘environment.yml’. Op dit moment is de ‘hdsrhipy’- respository nog ‘private’ en is dit bestand nog niet toegankelijk zonder uitnodiging. Projectteamleden zijn uitgenodigd. Als bovenstaande URL niet werkt, stuur dan een e-mail naar hurkmans@hkv.nl.
 
-3.	Open een Ananconda-prompt door op start te klikken en ‘anaconda in te typen’:
-
- 
+3.	Open een Ananconda-prompt door op start te klikken en ‘anaconda in te typen’.
 
 4.	Navigeer in de prompt naar de locatie waar het in stap 2 gekopieerde bestand staat:
 
