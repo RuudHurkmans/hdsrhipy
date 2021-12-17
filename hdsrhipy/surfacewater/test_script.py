@@ -55,7 +55,7 @@ ref_plus5.invoerdata['schaalgebied'] = ref_plus5.invoerdata['afwateringseenheden
 lswNrs = referentie.invoerdata['lsws']['LSWFINAL']
 
 print("Uitvoeren schaling lsw's naar schaalgebieden")
-for _, lsw_nr in tqdm(lswNrs[8:10].iteritems()):
+for _, lsw_nr in tqdm(lswNrs[:].iteritems()):
     
     # voer referentieanalyse uit
     referentie.uitvoeren_schaling(lsw_nr, onzekerheid_opp=0)
