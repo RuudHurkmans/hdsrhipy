@@ -189,8 +189,8 @@ class WatervraagAanbod():
         self.data['opp_schaalgebied'] = pd.DataFrame(index=self.data['top10nl_peilgebied_dissolved']['mozart_koppeling'],
                                                      data=self.data['top10nl_peilgebied_dissolved'].area.values)
    
-        self.data['opp_schaalgebied'] = self.data['opp_schaalgebied']*onzekerheidsfactor
-        self.data['opp_schaalgebied_perc'] = self.data['opp_schaalgebied']/self.data['opp_schaalgebied'].sum()
+        # self.data['opp_schaalgebied'] = self.data['opp_schaalgebied']
+        self.data['opp_schaalgebied_perc'] = self.data['opp_schaalgebied']*onzekerheidsfactor/self.data['opp_schaalgebied'].sum()
         
         # zet NaN-waarden om naar 0%
         self.data['opp_schaalgebied_perc'].fillna(0, inplace=True)

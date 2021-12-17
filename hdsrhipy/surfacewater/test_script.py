@@ -33,6 +33,12 @@ fNames['afwateringseenheden'] = r'd:\projecten\hydrologische_informatieproducten
 # uitvoer mozart
 fNames['mozart_out'] = r'd:\projecten\hydrologische_informatieproducten\werkmap\data\mozart\lswwaterbalans.out'
 
+# definieren van resultaatmappen
+ref_dir = r'd:\projecten\hydrologische_informatieproducten\werkmap\resultaten\referentie\\'
+min5_dir = r'd:\projecten\hydrologische_informatieproducten\werkmap\resultaten\min5\\'
+plus5_dir = r'd:\projecten\hydrologische_informatieproducten\werkmap\resultaten\plus5\\'
+
+
 #%% inlezen data
 
 # initieer watervraag- en aanbod class voor referentie en onzekerheidsanalyse
@@ -60,9 +66,6 @@ for _, lsw_nr in tqdm(lswNrs[8:10].iteritems()):
     
             
 #%% schrijf weg naar csv
-ref_dir = r'd:\projecten\hydrologische_informatieproducten\werkmap\resultaten\referentie\\'
-min5_dir = r'd:\projecten\hydrologische_informatieproducten\werkmap\resultaten\min5\\'
-plus5_dir = r'd:\projecten\hydrologische_informatieproducten\werkmap\resultaten\plus5\\'
 
 # schrijf geschaalde mozartresultaten weg naar mappen
 referentie.schaling_naar_csv(ref_dir)
@@ -111,9 +114,8 @@ df_min5 = pd.read_csv(f'{min5_dir}\mozart_schaalgebied_{code_afwateringsgebied}_
 df_plus5 = pd.read_csv(f'{plus5_dir}\mozart_schaalgebied_{code_afwateringsgebied}_geschaald.csv', parse_dates=True, index_col=[0])
 
 fig, ax = plt.subplots()
-
-# df_ref['watervraag_landbouw'].plot(ax=ax, legend=False)
-ax.fill_between(df_min5.index, df_min5['watervraag_landbouw'], df_plus5['watervraag_landbouw'])
+df_ref['watervraag_landbouw'].plot(ax=ax, legend=False)
+ax.fill_between(df_min5.index, df_min5['watervraag_landbouw'], df_plus5['watervraag_landbouw'], color='grey')
 
 #%% bepalen van klimaatscenarios
 # definieer de scenarios
