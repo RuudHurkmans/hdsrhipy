@@ -33,7 +33,7 @@ class Hydromedah:
         if resolution is None:
             resolution = 250.
         if metaswap_vars is None:
-            metaswap_vars = ['ETact','S01','Ssd01']
+            metaswap_vars = ['ETact','S01','Ssd01', 'qinf']
                 
         # util.prepare_raw_data(self.data_path)                
         
@@ -61,11 +61,11 @@ class Hydromedah:
         self.rf.data['ISAVE'][:] = 1          
         
                 
-    def run_model(self, model_path=None):             
+    def run_model(self, model_path=None, use_summerlevel=None, use_winterlevel=None, silent=False):             
         if model_path is None:
             model_path = self.data_path
         model_path = os.path.join(model_path, 'work', self.name)                
-        self.rf.run_imodflow(model_path, self.name, data_path=self.data_path)
+        self.rf.run_imodflow(model_path, self.name, data_path=self.data_path, use_summerlevel=use_summerlevel, use_winterlevel=use_winterlevel, silent=silent)
         
 
     # inlezen .key-bestand

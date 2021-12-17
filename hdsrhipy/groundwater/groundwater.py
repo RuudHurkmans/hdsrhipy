@@ -25,8 +25,8 @@ class Groundwater:
         self.model_path = Path(model_path)
         
         if export_path is None:
-            export_path = r'D:\4569.10\results\groundwater'            
-        self.export_path = Path(export_path)
+            export_path = r'D:\4569.10\results'            
+        self.export_path = Path(export_path) / 'groundwater'
         self.export_path.mkdir(parents=True, exist_ok=True)
         
         if name is None:
@@ -108,11 +108,10 @@ class Groundwater:
     def get_seepage(self):
         seep_folder = self.model_path / 'work' / self.name / 'output' / 'bdgflf'
         seepage = imod.idf.open(seep_folder / "bdgflf*_l1.idf")[:,0,:,:]        
-        self.seepage = (1e3*seepage)/float(seepage['dx'])**2
+        return (1e3*seepage)/float(seepage['dx'])**2
         
     def seepage_season_means(self, dataset=None):
-        if dataset is None:
-            dataset = self.seepage
+    
         time = [pd.Timestamp(dataset['time'].values[i]).month for i in range(len(dataset['time']))]
         season_means = []
         for s in range(6):
@@ -127,16 +126,28 @@ class Groundwater:
             season_means.append(meanseep)            
         return(season_means)
             
-    def get_riverseep(self):
-        pass   
     
-   
-    def get_validation_data(self):
-        path = r'D:\4569.10\validatiedata\groundwater'
-        catalogue_file = 'alle_aanwezig.csv'
-        timeseries_file = 'alle_reeksen.csv'
-        head_path = r'D:\4569.10\LHM_heads_Huidig250\head'
+    def prep_riverseep(self, offset=None, offset_name=None, seizoen=None, export_path=None):        
+        if export_path is None:
+            export_path = self.export_path
         
+        path = os.path.join(os.path.abspath('.'),'..','hdsrhipy','resources')
+        peil = imod.idf.open(os.path.join(path, seizoen+'_PEIL_LAAG1_1.IDF'))
+        peil = peil.rio.write_crs('epsg:28992', inplace=True)
+        
+        owshp = gpd.read_file(os.path.join(path,'openwater.shp'))
+        owshp = owshp.to_crs('epsg:28992')
+        
+        clipped = peil.rio.clip(owshp.geometry, owshp.crs, all_touched=False, drop=False)        
+        clipped = clipped+offset        
+        merged = clipped.fillna(peil)        
+        merged.rio.to_raster(os.path.join(export_path,seizoen+'_PEIL_LAAG1_1_'+offset_name+'.tif'))
+        imod.idf.write(os.path.join(export_path, seizoen+'_PEIL_LAAG1_1_'+offset_name+'.IDF'), merged, nodata=1e+20, dtype=np.float32)
+       
+    def get_diffseep(self, hydromedah_path=None, name=None):
+        pass
+       
+    def get_validation_data(self, obs_path=None, catalogue=None, timeseries=None, heads=None):        
         read_csv(path=path, catalogue_file=catalogue_file, timeseries_file=timeseries_file)   
 
         basename = 'catalogus_selected_layer'

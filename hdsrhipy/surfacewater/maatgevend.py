@@ -26,34 +26,29 @@ class Maatgevend:
    
     def __init__(self, name=None, export_path=None, afw_shape=None):        
         
-        if export_path is None:
-            export_path = r'D:\4569.10\results'#%%       
-       
-        if afw_shape is None:
-            afw_shape = r'D:\4569.10\python\hdsrhipy\resources\Afwateringseenheden.shp'
         self.export_path = Path(export_path) / 'Maatgevend'
         self.export_path.mkdir(parents=True, exist_ok=True)
         
-        if name is None:
-            name='Huidig250'
+        if afw_shape is None:
+            afw_shape = os.path.join(os.path.abspath('.'), '..','hdsrhipy','resources','Afwateringseenheden.shp')       
+            
         self.name=name                     
             
         self.afw = gpd.read_file(afw_shape)
         self.afw['CODENR'] = self.afw.index + 1       
                 
         
-    def subtract_seepage(self, mean_seepage = True, model_path = None):     
+    def subtract_seepage(self, mean_seepage = True, model_path = None, name=None):     
         
-        gw = Groundwater(model_path=model_path, name=self.name)
-        if not(hasattr(gw, 'seepage')):
-            gw.get_seepage()
-                
+        gw = Groundwater(model_path=model_path, name=name)
+        seep = gw.get_seepage()                
+        
         self.laterals_nosp = self.laterals.copy(deep=True)
         if mean_seepage:
             # take temporal average from seepage and convert it from mm/d to m3/s , like the laterals
-            av_seep  =  gw.seepage.mean(dim='time') 
-            av_seep.rio.to_raster(os.path.join(self.export_path,'temp.tif'))          
-            sp_per_afw = zonal_stats( self.afw, os.path.join(self.export_path,'temp.tif'),stats='mean', all_touched=True)        
+            av_seep  =  seep.mean(dim='time') 
+            av_seep.rio.to_raster(self.export_path / 'temp.tif')
+            sp_per_afw = zonal_stats( self.afw, self.export_path / 'temp.tif',stats='mean', all_touched=True)        
             seep = [sp_per_afw[int(j)-1]['mean']*self.afw.geometry.area.iloc[int(j)-1] /  (1000. * 86400.) for j in self.laterals.columns]
             for i in tqdm(range(self.laterals_nosp.shape[0]), total=self.laterals_nosp.shape[0]):                 
                 # print( 'Processing '+str(i)+' of '+str(self.laterals_nosp.shape[0]))
@@ -61,33 +56,32 @@ class Maatgevend:
                 # for jj,j in enumerate(self.laterals.columns):
                 #     self.laterals_nosp.iloc[i,jj] = self.laterals.iloc[i,jj] - sp_per_afw[int(j)-1]['mean'] * \
                 #                                         self.afw.geometry.area.iloc[int(j)-1] / (1000. * 86400.)                        
-            self.laterals_nosp.to_csv(os.path.join(self.export_path, '..','Laterals_nosp_av_'+self.name+'.csv'), sep=",")
+            self.laterals_nosp.to_csv(self.export_path / str('Laterals_nosp_av_'+self.name+'.csv'), sep=",")
   
         else:
-            for i in tqdm(range(self.laterals_nosp.shape[0]), total=self.laterals_nosp.shape[0]):        
-                print( 'Processing '+str(i)+' of '+str(self.laterals_nosp.shape[0]))
+            for i in tqdm(range(self.laterals_nosp.shape[0]), total=self.laterals_nosp.shape[0]):                        
                 # take temporal average from seepage and convert it from mm/d to m3/s , like the laterals
-                rast = gw.seepage.isel({'time':i})
-                rast.rio.to_raster(os.path.join(self.export_path,'temp.tif'))          
-                sp_per_afw = zonal_stcats( self.afw, os.path.join(self.export_path,'temp.tif'),stats='mean', all_touched=True)
-                seep = [sp_per_afw[int(j)-1]['mean']*self.afw.geometry.area.iloc[int(j)-1] /  (1000. * 86400.) for j in self.laterals.columns]
-                self.laterals_nosp.iloc[i,:] = self.laterals.iloc[i,:] - seep 
+                rast = seep.isel({'time':i})
+                rast.rio.to_raster(self.export_path / 'temp.tif')     
+                sp_per_afw = zonal_stats( self.afw, self.export_path / 'temp.tif',stats='mean', all_touched=True)
+                sp = [sp_per_afw[int(j)-1]['mean']*self.afw.geometry.area.iloc[int(j)-1] /  (1000. * 86400.) for j in self.laterals.columns]
+                self.laterals_nosp.iloc[i,:] = self.laterals.iloc[i,:] - sp 
                 #for jj,j in enumerate(self.laterals.columns):
                 #    self.laterals_nosp.iloc[i,jj] = self.laterals.iloc[i,jj] - sp_per_afw[int(j)-1]['mean'] * \
                 #                                        self.afw.geometry.area.iloc[int(j)-1] / (1000. * 86400.)                  
                                                         
-            self.laterals_nosp.to_csv(os.path.join(self.export_path, '..','Laterals_nosp_dyn_'+self.name+'.csv'), sep=",")
+            self.laterals_nosp.to_csv(self.export_path / str('Laterals_nosp_dyn_'+self.name+'.csv'), sep=",")
         
     def get_laterals(self, seepage_subtracted=True, mean_seepage=True):       
         if seepage_subtracted:
             if mean_seepage:
-                self.laterals_nosp = pd.read_csv(os.path.join(self.export_path,'..','Laterals_nosp_av_'+self.name+'.csv'), sep=",")
+                self.laterals_nosp = pd.read_csv(self.export_path / str('Laterals_nosp_av_'+self.name+'.csv'), sep=",")
             else:
-                self.laterals_nosp = pd.read_csv(os.path.join(self.export_path,'..','Laterals_nosp_dyn_'+self.name+'.csv'), sep=",")
+                self.laterals_nosp = pd.read_csv(self.export_path / str('Laterals_nosp_dyn_'+self.name+'.csv'), sep=",")
             self.laterals_nosp.index = self.laterals_nosp.iloc[:,0] 
             self.laterals_nosp.drop(self.laterals_nosp.columns[0:2], axis=1,inplace=True)            
         else:
-            self.laterals = pd.read_csv(os.path.join(self.export_path,'..','Laterals_'+self.name+'.csv'), sep=",")
+            self.laterals = pd.read_csv(self.export_path / str('Laterals_'+self.name+'.csv'), sep=",")
             self.laterals.index = self.laterals.iloc[:,0] 
             self.laterals.drop(self.laterals.columns[0:2], axis=1,inplace=True)
             
@@ -109,7 +103,7 @@ class Maatgevend:
         mqaan = rts10.sort_values(ascending=True).iloc[int(-0.1*len(years))]
         return [rts1, mqaf, rts10, mqaan]
 
-    def plot_location(self, nr, seepage_subtracted = True):             
+    def plot_location(self, nr, seepage_subtracted = True):         
         afwid = self.afw.loc[self.afw.CODENR==int(nr),'CODE'].to_string(index=False)
         area = float(self.afw.loc[self.afw.CODENR==int(nr),'geometry'].area)
         m3s_to_mmd = area/(1000.*86400.)
@@ -143,7 +137,7 @@ class Maatgevend:
             axs[2].plot(len(times)-int(0.1*len(years)), self.process_timeseries(tsc)[3]/m3s_to_lsha, 's',color='red', label='Maatgevende aanvoer zonder kwel')        
         axs[2].set_ylabel('Aanvoer [$\mathregular{l s^{-1} ha^{-1}}$]')
         axs[2].legend(ncol=1)
-        plt.savefig(os.path.join(self.export_path, 'MG_'+afwid+'_'+self.name+'.png'))
+        plt.savefig(self.export_path /  str('MG_'+afwid+'_'+self.name+'.png'))
                    
     def get_q_norm(self, dataset=None):
         mg_q = self.afw.copy(deep=True)
@@ -155,11 +149,10 @@ class Maatgevend:
         mg_q['MQAF_LSHA'] = np.nan
         mg_q['MQAAN_M3S'] = np.nan
         mg_q['MQAAN_LSHA'] = np.nan
-        mg_q.index = self.afw.index
-        m3s_to_mmd = area/(1000.*86400.)
-        m3s_to_lsha = area*10000./1000.
-        #%%
+        mg_q.index = self.afw.index            
         for ind,i in self.afw.iterrows():
+            m3s_to_mmd = i.geometry.area/(1000.*86400.)
+            m3s_to_lsha = i.geometry.area*10000./1000.
             if str(i.CODENR) in dataset.columns.to_list():        
                 ts = dataset.loc[:,str(i.CODENR)]                        
                 (_,mqaf, _, mqaan) = self.process_timeseries(ts)                                
@@ -171,6 +164,6 @@ class Maatgevend:
         return mg_q
         
     def export_shp(self, dataset, filename):
-        filename = os.path.join(self.export_path, filename)
+        filename =self.export_path / str(filename)
         dataset.to_file(filename)
                 

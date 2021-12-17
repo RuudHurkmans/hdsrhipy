@@ -217,7 +217,7 @@ class Runfile():
             
             r = f.readline()
             for iT in range(d['NPER']):
-                r = r.replace(',',' ').split()
+                r = r.replace(',',' ').split()                
                 d['KPER' ][iT] = int(r[0])
                 d['DELT' ][iT] = float(r[1])
                 d['DATE' ][iT] = r[2]
@@ -425,7 +425,7 @@ class Runfile():
                 else:
                     f.write('{}\n'.format(fname))
             
-    def run_imodflow(self,model_ws,name,data_path=None,exefile=None,silent=False):  
+    def run_imodflow(self,model_ws,name,data_path=None,exefile=None,silent=False, use_summerlevel=None, use_winterlevel=None):  
         """Run imodflow in the directory model_ws."""
         # prepare the model directory
         if not os.path.isdir(model_ws):
@@ -517,7 +517,10 @@ class Runfile():
                                     inp.write(file,fname)
                                 else:
                                     util.copy_data_file(data_path,model_ws,file)
-                            
+        if use_summerlevel is not None:            
+            shutil.copy(use_summerlevel, os.path.join(model_ws,'OPPERVLAKTEWATER','ZOMER','PEIL_LAAG1_1.IDF'))
+            shutil.copy(use_winterlevel, os.path.join(model_ws,'OPPERVLAKTEWATER','WINTER','PEIL_LAAG1_1.IDF'))
+            
         # run executable and display output in Console
         print('Run iModflow')
         batch_file = os.path.join(model_ws,name+'.bat')

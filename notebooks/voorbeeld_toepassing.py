@@ -1,14 +1,16 @@
 import os
 import sys
 import imod
-import xarray as xr
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+import shutil
 from shapely.geometry import Point
 package_path = os.path.abspath('../')
 sys.path.append(package_path)  
 from pathlib import Path
+import rasterio
+import rioxarray as rio
 
 from hdsrhipy import Meteorology
 from hdsrhipy import Hydromedah
@@ -48,6 +50,33 @@ hydromedah_path = os.path.join(r'E:\Hydromedah')
 #meteo.download_from_WIWB(credentials=credentials, datasource='Meteobase.Evaporation.Makkink', variable='evaporation', start='20100101000000', end='20210101000000', timestep='1D', download_path = Path(hydromedah_path))
 #meteo.download_from_WIWB(credentials=credentials, datasource='Knmi.International.Radar.Composite.Final.Reanalysis', variable='precipitation', start='20210101000000', end='20211001000000', timestep='1D', download_path = Path(hydromedah_path))
 
+
+#%%
+
+
+#%%
+export_path = r'D:\4569.10\results'
+
+#peil_hagbov = [3.25, 5.14, 6.30] # # gemiddeld 3.65 T1, T10, T100
+#Berekening voor berekend/opgegeven niveau  3.25 m+NAP
+#Berekening voor berekend/opgegeven niveau  5.14 m+NAP
+#Berekening voor berekend/opgegeven niveau  6.30 m+NAP
+
+# for i in range(len(offsets)):
+offsets = [0.0]+[x-3.65 for x in [3.25, 5.14, 6.30]]
+offsetnames = ['ref','T1','T10','T100']
+
+
+
+# print('s')
+#%%
+# ds = rasterio.open(os.path.join(pad,'peil_laag1_1.tif'))             
+# ds = ds.rio.set_crs(28992, inplace=True)       
+# #pixels,_ = mask(dataset=dat.to_dataset(), shapes=[json.loads(owshp.to_json())['features'][0]['geometry']], crop=True)
+# pixels,_ = mask(dataset=ds,shapes=[json.loads(owshp2.to_json())['features'][0]['geometry']], crop=True)
+#%%
+
+
 #% 2021
 nc_path = Path(r'D:\4569.10\nonapi_forcering')
 # meteo.download_from_WIWB(credentials=credentials, api_key=None, datasource='Knmi.International.Radar.Composite.Final.Reanalysis', variable='precipitation', start='20210101000000', end='20210101000000', timestep='1D', download_path = Path(hydromedah_path))
@@ -59,31 +88,33 @@ nc_path = Path(r'D:\4569.10\nonapi_forcering')
 #meteo.download_from_WIWB(credentials=credentials, datasource='Knmi.International.Radar.Composite.Final.Reanalysis', variable='precipitation', start='20210831000000', end='20210902000000', timestep='1H', extent=[10725,102725,450793,635793],download_path = Path(r'D:\3663.10\WS2021'))
 #forecasts
 #meteo.download_from_WIWB(credentials=credentials, datasource='Knmi.Harmonie.Evaluatie', variable='absolute_difference', start=f'20210101000000', end=f'20210102000000', timestep='6H', extent=[10725,102725,450793,635793],download_path = Path(r'D:\3663.10\eval'))
-#%%
+# #%%
 
-#msw_vars = ['ETact','S01','Ssd01', 'qinf']
+msw_vars = ['ETact','S01','Ssd01', 'qinf']
+# hh = 'REF'
 # name = 'Huidig250'
-
+# validatiepad = r'D:\4569.10\validatiedata'
 # hydromedah = Hydromedah(data_path=hydromedah_path, name=name, precip_path=hydromedah_path,evap_path=hydromedah_path)
 # hydromedah.setup_model(start_date='2010-01-01', end_date='2021-10-01', resolution=250., add_surface_water=True, afw_shape = 'Afwateringseenheden', metaswap_vars = msw_vars)
 
-# name = 'WH85250'
-# hydromedah = Hydromedah(data_path=hydromedah_path, name=name, precip_path=r'E:\scenarios\\RD85WH',evap_path=r'E:\scenarios\\EV85WH')
-# hydromedah.setup_model(start_date='2080-01-01', end_date='2089-12-31', resolution=250., add_surface_water=True, afw_shape = 'Afwateringseenheden', metaswap_vars = msw_vars)
+# #shutil.copyfile(os.path.join(validatiepad, 'PEIL_LAAG_1_'+hh+'.IDF'), os.path.join(hydromedah_path, 'work', name, 'OPPERVLAKTEWATER','WINTER','PEIL_LAAG1_1.IDF'))
+# # name = 'WH85250'
+# # hydromedah = Hydromedah(data_path=hydromedah_path, name=name, precip_path=r'E:\scenarios\\RD85WH',evap_path=r'E:\scenarios\\EV85WH')
+# # hydromedah.setup_model(start_date='2080-01-01', end_date='2089-12-31', resolution=250., add_surface_water=True, afw_shape = 'Afwateringseenheden', metaswap_vars = msw_vars)
 # hydromedah.run_model(model_path = hydromedah_path)
 # laterals = hydromedah.read_laterals(model_path=hydromedah_path, model_name=name, msw_file='sw_dtgw')
 # laterals.to_csv(os.path.join(export_path,'laterals_'+name+'.csv'),sep=",")
 # hydromedah.cleanup(model_path=hydromedah_path, name=name, 
-#                      modflow_vars = ['head','bdgflf'],
-#                      modflow_layers = [1],
-#                      metaswap_files = [])              
+#                       modflow_vars = ['head','bdgflf'],
+#                       modflow_layers = [1],
+#                       metaswap_files = ['sw_dtgw'])              
 
 
    
 #%%
 # name = 'Huidig250_2'
 # r = Runoff(name=name)
-# sd = r.get_msw_var('msw_Ssd01')
+# sd = r.get_msw_var('msw_Ssd01')4
 # sd_mean = r.get_season_stat(sd, stat='mean')
 # sd_samples = sample_nauwkeurigheid(sd, [-0.1,0.1], n=2)
 # (sd_avmin, sd_avmax)  = MonteCarlo('metaswap_mean', sd_samples, bootstrap_n=2, n=2)

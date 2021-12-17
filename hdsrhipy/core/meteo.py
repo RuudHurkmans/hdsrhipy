@@ -184,7 +184,8 @@ class Meteorology:
         # API settings
         api_url = 'https://wiwb.hydronet.com/api/'
         if credentials is None:
-            credentials = ('hkv.lijninwater', 'mVxIbDqmsWpK40P2WafY')
+            return('Credentials are needed, sorry.')            
+            
         #if 'Radar' in datasource:            
         url = api_url+'/grids/get'                
         
