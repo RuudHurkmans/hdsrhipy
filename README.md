@@ -30,9 +30,12 @@ Nu wordt een Python-omgeving genaamd ‘hdsrhipy’ aangemaakt met daarin alle b
 
 https://github.com/RuudHurkmans/hdsrhipy
 
-En download de code als zip-bestand via “Download ZIP”:
- 
-Pak de code op de gewenste locatie uit. Nu zijn alle benodigde onderdelen geïnstalleerd en kan een Jupyter-notebook worden opgestart om de code uit te voeren.
+En download de code als zip-bestand via “Download ZIP”. Pak de code op de gewenste locatie uit. Merk op dat op dit moment hdsrhipy op dit moment nog niet openbaar is en niet toegangkelijk zonder Github account. Hiet ZIP-bestand is nu bijgevoegd bij de oplevering. Pak deze dus uit op de gewenste locatie. De laatste stap is het registren van bovenstaand environment (hdsrhipy) aan Jupyter notebook. Voer daartoe dit commando uit:
+
+python -m ipykernel install --user --name=hdsrhipy
+
+Nu zijn alle benodigde onderdelen geïnstalleerd en kan een Jupyter-notebook worden opgestart om de code uit te voeren.
+
 4.2	Gebruik Jupyter-notebook
 
 Voer, om het notebook op te starten, de volgende commando’s uit in de Anaconda prompt.

@@ -11,22 +11,27 @@ import shutil
 import numpy as np
 from datetime import datetime as dt
 from datetime import timedelta as td
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from pathlib import Path
 
 class Hydromedah:
     
     """ Methods to set-up and run the Hydromedah model"""
-    def __init__(self, data_path=None, name=None, precip_path=None, evap_path=None):
-        if data_path is None:
-            data_path = os.path.join('..','data','hydromedah')
-        self.data_path = data_path
+    def __init__(self, hydromedah_path=None, name=None, precip_path=None, evap_path=None):
         
-        if name is None:
-            self.name = 'runmodel'
+        if hydromedah_path is not None:
+            self.data_path = hydromedah_path    
         else:
-            self.name = name
-        self.rf = Runfile(os.path.join(data_path,'hdsr_ns.run'), data_path='$DBASE$\\', evap_path=evap_path, precip_path=precip_path)
+            return('A path to Hydromedah is required.')
+                
+        if precip_path is None:
+            precip_path = hydromedah_path
+        
+        if evap_path is None:
+            evap_path = hydromedah_path
+        
+        self.name = name
+        self.rf = Runfile(os.path.join(self.data_path,'hdsr_ns.run'), data_path='$DBASE$\\', evap_path=evap_path, precip_path=precip_path)
         
      
     def setup_model(self, start_date=None, end_date=None, resolution=None, metaswap_vars=None, add_surface_water=None, afw_shape = None):

@@ -59,7 +59,7 @@ class Meteorology:
             if timestep=='Days':
                 time = 'D'
             time = np.datetime_as_string(arr['time'], unit=time)    
-            #time = np.datetime_as_string(arr['time'], unit='m')[0:10]+np.datetime_as_string(arr['time'], unit='m')[11:13]+np.datetime_as_string(arr['time'], unit='m')[14:16]
+            #time = np.datetime_as_string(arr['time'], unit=time)#[0:10]+np.datetime_as_string(arr['time'], unit='m')[11:13]+np.datetime_as_string(arr['time'], unit='m')[14:16]
             fn = variable+'_'+time+'.asc'    
             imod.rasterio.write( forcing_path / fn, arr, nodata=-999)
          
@@ -158,7 +158,7 @@ class Meteorology:
                 logger.info(str(temp_path / dataset_file['filename'])+' exists.')
             ds = xr.open_dataset(temp_path / dataset_file['filename'])
             ds = ds.rename({'prediction':'variable'})
-            self.write2ascii(ds, variable=variable, path=download_path)        
+            self.write2ascii(ds, variable=variable, path=download_path, timestep='Days')        
             ds.close()
             #os.remove(temp_path / dataset_file['filename'])
             

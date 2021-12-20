@@ -26,11 +26,12 @@ class Maatgevend:
    
     def __init__(self, name=None, export_path=None, afw_shape=None):        
         
-        self.export_path = Path(export_path) / 'Maatgevend'
-        self.export_path.mkdir(parents=True, exist_ok=True)
+        if export_path is not None:
+            self.export_path = Path(export_path) / 'Maatgevend'
+            self.export_path.mkdir(parents=True, exist_ok=True)
         
         if afw_shape is None:
-            afw_shape = os.path.join(os.path.abspath('.'), '..','hdsrhipy','resources','Afwateringseenheden.shp')       
+            afw_shape = os.path.join(os.path.abspath('.'), '..','data','gis','Afwateringseenheden.shp')       
             
         self.name=name                     
             
@@ -40,6 +41,8 @@ class Maatgevend:
         
     def subtract_seepage(self, mean_seepage = True, model_path = None, name=None):     
         
+        if name is None:
+            name = self.name
         gw = Groundwater(model_path=model_path, name=name)
         seep = gw.get_seepage()                
         
@@ -107,11 +110,11 @@ class Maatgevend:
         afwid = self.afw.loc[self.afw.CODENR==int(nr),'CODE'].to_string(index=False)
         area = float(self.afw.loc[self.afw.CODENR==int(nr),'geometry'].area)
         m3s_to_mmd = area/(1000.*86400.)
-        m3s_to_lsha = area*10000./1000.
+        m3s_to_lsha = area/(1000.*10000.)
         print('Plotting '+afwid)
         ts = self.laterals.loc[:,str(nr)]         
         if seepage_subtracted:
-            tsc = self.laterals_nosp.loc[:,str(nr)]                
+            tsc = self.laterals_nosp.loc[:,str(nr)]            
         fig, axs = plt.subplots(3)
         times = [pd.Timestamp(ts.index[i]) for i in range(len(ts.index))]
         years = set([pd.Timestamp(ts.index[i]).year for i in range(len(ts.index))])
@@ -137,7 +140,7 @@ class Maatgevend:
             axs[2].plot(len(times)-int(0.1*len(years)), self.process_timeseries(tsc)[3]/m3s_to_lsha, 's',color='red', label='Maatgevende aanvoer zonder kwel')        
         axs[2].set_ylabel('Aanvoer [$\mathregular{l s^{-1} ha^{-1}}$]')
         axs[2].legend(ncol=1)
-        plt.savefig(self.export_path /  str('MG_'+afwid+'_'+self.name+'.png'))
+        plt.savefig(self.export_path /  str('MG_'+afwid+'_'+self.name+'.jpg'))
                    
     def get_q_norm(self, dataset=None):
         mg_q = self.afw.copy(deep=True)
@@ -150,9 +153,9 @@ class Maatgevend:
         mg_q['MQAAN_M3S'] = np.nan
         mg_q['MQAAN_LSHA'] = np.nan
         mg_q.index = self.afw.index            
-        for ind,i in self.afw.iterrows():
+        for ind,i in tqdm(self.afw.iterrows(), total=len(self.afw)):
             m3s_to_mmd = i.geometry.area/(1000.*86400.)
-            m3s_to_lsha = i.geometry.area*10000./1000.
+            m3s_to_lsha = i.geometry.area/(10000.*1000.)
             if str(i.CODENR) in dataset.columns.to_list():        
                 ts = dataset.loc[:,str(i.CODENR)]                        
                 (_,mqaf, _, mqaan) = self.process_timeseries(ts)                                
@@ -167,3 +170,39 @@ class Maatgevend:
         filename =self.export_path / str(filename)
         dataset.to_file(filename)
                 
+    def get_validation(self, afgid=None, afvoer=None, aanvoer=None):                
+        
+        # read the shapefile of afvoergeibeden and extract the right one
+        afg_shape = os.path.join(os.path.abspath('.'), '..','data','gis','Afvoergebieden.shp')                
+        afg = gpd.read_file(afg_shape)
+        gebied = [i for _,i in afg.iterrows() if str(i.GAFCODE)==afgid]
+        
+        # make subset of intersecting afwateringseenheden
+        sub = self.afw[self.afw.geometry.intersects(gebied[0].geometry)]
+        # get the laterals        
+        if not hasattr(self, 'laterals'):            
+            self.get_laterals(seepage_subtracted=False)
+        # sum the flux in m3/s
+        num = 0
+        for i in sub.CODENR:
+            if str(i) in self.laterals.columns:        
+                if num==0:
+                    netto_hydromedah = self.laterals.loc[:,str(i)]
+                else:
+                    netto_hydromedah += self.laterals.loc[:,str(i)]
+                num+=1
+        # make a nice dataframe 
+        netto_hydromedah.index = [pd.Timestamp(netto_hydromedah.index[i]) for i in range(len(netto_hydromedah))]
+        
+        # convert the weird WIS datato floats for this afvoergebied and get the netto flux in dataframe
+        af_wis = [float(i) for i in afvoer.loc[:,afgid]]
+        aan_wis = [float(i) for i in aanvoer.loc[:,afgid]]
+        netto = pd.DataFrame([af_wis[i] - aan_wis[i] for i in range(len(af_wis))], columns=['WIS'], index = afvoer.index)
+        # convert to m3/s, like the laterals
+        netto['WIS'] = netto['WIS']*float(afg[afg.GAFCODE==afgid].geometry.area)/(1000. * 86400.)
+        # merge add the right timesteps
+        netto = netto.merge(netto_hydromedah,left_index=True, right_index=True)
+        netto.columns = ['WIS','HYDROMEDAH']
+        # get the error
+        netto['ERROR'] = netto['WIS'] - netto['HYDROMEDAH']
+        return netto

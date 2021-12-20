@@ -6,10 +6,16 @@ dependencies:
   - python=3.7.*
   - git=2.30.0
   - pip=21.0
+  - flopy=3.3.4
+  - pastas=0.18.0
+  - sklearn=0.0
   - ipykernel=5.4.3
+  - pymannkendall=1.4.2
+  - contextily-1.2.0
   - ipywidgets=7.6.3
   - geopandas=0.8.2
   - rasterio=1.2.0
+  - jupyterlab=3.0.10
   - imod=0.10.1
   - numpy=1.19.5
   - scipy=1.6.0
@@ -19,7 +25,8 @@ dependencies:
   - rasterstats=0.14.0
   - tqdm=4.56.0
   - rioxarray=0.5.0
-  
+  - openpyxl=3.0.9
+  -descartes=1.1.0
   
   
   

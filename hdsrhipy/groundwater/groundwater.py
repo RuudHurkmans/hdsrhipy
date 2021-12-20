@@ -20,18 +20,16 @@ from hdsrhipy.groundwater.read_csv_timeseries import *
 
 class Groundwater:    
     def __init__(self, model_path=None, name=None, export_path=None):
-        if model_path is None:
-            model_path = r'E:\Hydromedah'
-        self.model_path = Path(model_path)
+        if model_path is not None:            
+            self.model_path = Path(model_path)
         
-        if export_path is None:
-            export_path = r'D:\4569.10\results'            
-        self.export_path = Path(export_path) / 'groundwater'
-        self.export_path.mkdir(parents=True, exist_ok=True)
+        if export_path is not None:            
+            self.export_path = Path(export_path) / 'Grondwater'
+            self.export_path.mkdir(parents=True, exist_ok=True)
         
-        if name is None:
-            name='Huidig250'
-        self.name=name                    
+        if name is not None:            
+            self.name=name                    
+            
         
     def get_heads_raster(self, mv_raster=None):               
         head_folder = self.model_path / 'work' / self.name / 'output' / 'head'
@@ -131,13 +129,13 @@ class Groundwater:
         if export_path is None:
             export_path = self.export_path
         
-        path = os.path.join(os.path.abspath('.'),'..','hdsrhipy','resources')
+        path = os.path.join(os.path.abspath('.'),'..','data','gis')
         peil = imod.idf.open(os.path.join(path, seizoen+'_PEIL_LAAG1_1.IDF'))
         peil = peil.rio.write_crs('epsg:28992', inplace=True)
         
         owshp = gpd.read_file(os.path.join(path,'openwater.shp'))
         owshp = owshp.to_crs('epsg:28992')
-        
+            
         clipped = peil.rio.clip(owshp.geometry, owshp.crs, all_touched=False, drop=False)        
         clipped = clipped+offset        
         merged = clipped.fillna(peil)        
@@ -147,8 +145,10 @@ class Groundwater:
     def get_diffseep(self, hydromedah_path=None, name=None):
         pass
        
-    def get_validation_data(self, obs_path=None, catalogue=None, timeseries=None, heads=None):        
-        read_csv(path=path, catalogue_file=catalogue_file, timeseries_file=timeseries_file)   
+    def get_validation_data(self, validation_path=None, catalogue=None, timeseries=None, head_path=None):        
+        path = validation_path
+        read_csv(path=path, catalogue_file=catalogue, timeseries_file=timeseries)   
+
 
         basename = 'catalogus_selected_layer'
         dataset='region'
@@ -220,9 +220,8 @@ class Groundwater:
             os.makedirs(tsPath)
 
         # read netCDF files as xarray and add to list
-        ncData = []
-        head_folder = Path(head_path)
-        ncData.append(imod.idf.open(head_folder / "head*_l1.idf")[:,0,:,:])
+        ncData = []        
+        ncData.append(imod.idf.open(Path(head_path) / "head*_l1.idf")[:,0,:,:])
                                                
         # read csv file with piezometer data
         csvFile = os.path.join(ipfPath, baseName + '.csv')
@@ -283,9 +282,7 @@ class Groundwater:
                        df, indexcolumn=3, assoc_ext='txt', nodata=1e+20)
 
 
-    def get_bandwith(self, valid_results=None):
-        pass
-        
+    
 
 
 

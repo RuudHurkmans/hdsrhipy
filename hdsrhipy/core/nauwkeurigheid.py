@@ -70,13 +70,13 @@ def sample_nauwkeurigheid(data, bandbreedte, n=3):
             raise TypeError('A 2D or 3D array is required.')        
     return samples
 
-def MonteCarlo(variable, samples, bootstrap_n=3, n=3):
+def MonteCarlo(variable, samples, bootstrap_n=3, n=3, model_path=None, model_name=None):
     def makeds(arr, ref):
         ds = ref.copy(deep=True)
         ds.values = arr
         return ds
     
-    gw = Groundwater()
+    gw = Groundwater(model_path=model_path, name=model_name)
     mg = Maatgevend()
     r = Runoff()
     
@@ -131,7 +131,10 @@ def MonteCarlo(variable, samples, bootstrap_n=3, n=3):
         mins.append(makeds(np.amin(sublistgt,axis=2), refda))
         maxs.append(makeds(np.amax(sublistgt,axis=2), refda))
     elif variable=='normative':
-        print(len(reslist))
+        mins.append(np.amin(np.dstack([sub['MQAF_LSHA'] for sub in reslist])[0,:,:], axis=1))
+        mins.append(np.amin(np.dstack([sub['MQAAN_LSHA'] for sub in reslist])[0,:,:], axis=1))
+        maxs.append(np.amax(np.dstack([sub['MQAF_LSHA'] for sub in reslist])[0,:,:], axis=1))
+        maxs.append(np.amax(np.dstack([sub['MQAAN_LSHA'] for sub in reslist])[0,:,:], axis=1))                
     elif variable.startswith('metaswap'):
         for s in range(2):
             print(f'Get min/max for season {s+1}')

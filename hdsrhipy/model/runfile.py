@@ -218,7 +218,7 @@ class Runfile():
             r = f.readline()
             for iT in range(d['NPER']):
                 r = r.replace(',',' ').split()                
-                d['KPER' ][iT] = int(r[0])
+                d['KPER' ][iT] = int(r[0])                
                 d['DELT' ][iT] = float(r[1])
                 d['DATE' ][iT] = r[2]
                 d['ISAVE'][iT] = int(r[3])
@@ -670,7 +670,7 @@ class Runfile():
         if os.path.isdir(pathname):
             fname = os.path.join(pathname,'mete_grid.inp')                      
             mete_grid = []
-            for year in years:
+            for year in years:               
                 mg = inp.read(fname)     
                 # if year == years[-1]:
                 #     mg = mg.iloc[0:366,:]

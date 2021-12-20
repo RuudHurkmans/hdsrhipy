@@ -19,20 +19,15 @@ import glob
 
 class Runoff:    
     
-    def __init__(self, model_path=None, name=None, export_path=None, gis_path=None):
-        if model_path is None:
-            model_path = r'E:\Hydromedah'
-        self.model_path = Path(model_path)
+    def __init__(self, model_path=None, name=None, export_path=None):
+       
+        if model_path is not None:
+            self.model_path = Path(model_path)
         
-        if export_path is None:
-            export_path = r'D:\4569.10\results'            
-        self.export_path = Path(export_path) / 'runoff'
-        self.export_path.mkdir(parents=True, exist_ok=True)
-            
-        if gis_path is None:
-            gis_path = os.path.join(os.path.abspath('.'), '..','hdsrhipy','resources') 
-        self.gis_path = gis_path
-            
+        if export_path is not None:                   
+            self.export_path = Path(export_path) / 'runoff'
+            self.export_path.mkdir(parents=True, exist_ok=True)           
+        
         self.name=name    
         
     def get_msw_var(self, variable=None):
@@ -112,7 +107,7 @@ class Runoff:
         
         # Lees water en bodemeenheden bestanden in geopandas
         bodem = gpd.read_file(bodemeenheden)
-        water = gpd.read_file(os.path.join(os.path.abspath('.'), '..','hdsrhipy','resources','HSDR_bgt_waterdeel.shp'))
+        water = gpd.read_file(os.path.join(os.path.abspath('.'), '..','data','gis','HSDR_bgt_waterdeel.shp'))
         
         # lees ahn in
         data = rasterio.open(ahndata)
@@ -169,7 +164,7 @@ class Runoff:
             df1 = pd.DataFrame(gdf_zonal_stats.drop(columns='geometry'))
             df1 = df1.rename(columns={"min": "min_hoogte","count": "oppervlak", "percentile_"+str(percentage): "hoogte"})
             df1["oppervlak"] = df1["oppervlak"]*cellsize*cellsize
-            df1["volume"] = df1["hoogte"]*df1["oppervlak"]
+            df1["volume"] = abs(df1["hoogte"]*df1["oppervlak"])
                         
             # Resultaat samenvoegen met oorsponkelijke shape en opslaan als shapefile
             resultdef = pd.merge(bodem, df1, on=[self.zonalid, self.zonalid])
@@ -194,7 +189,7 @@ class Runoff:
         
         # concate alle dataframes
         df = pd.concat(li, axis=0)
-        df.drop([col for col in gdf.columns if col not in ['OBJECTID','Shape_Area','min_hoogte','hoogte', 'volume','geometry']], axis=1, inplace=True)
+        df.drop([col for col in df.columns if col not in ['OBJECTID','Shape_Area','min_hoogte','hoogte', 'volume','geometry']], axis=1, inplace=True)
         
         [os.remove(os.path.join(temp_path,f)) for f in [file for file in os.listdir(temp_path) if file.startswith('maaiveldcurve')]]
 
