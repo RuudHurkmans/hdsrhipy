@@ -4,8 +4,8 @@ Created on Thu Oct 11 12:31:23 2018
 
 @author: Artesia
 """
-import osr
-import gdal
+from osgeo import osr
+from osgeo import gdal
 import numpy as np
 
 def xyz2gdal_dataset(x, y, z, projection=28992, no_data_value=None,

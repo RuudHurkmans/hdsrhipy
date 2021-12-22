@@ -12,7 +12,7 @@ from hdsrhipy.model import inp
 from hdsrhipy.model import rasters
 import shutil
 import subprocess as sp
-import gdal
+from osgeo import gdal
 import imod
 from datetime import datetime
 from datetime import timedelta

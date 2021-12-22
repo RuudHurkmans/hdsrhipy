@@ -10,7 +10,7 @@ from shapely.geometry import Point, Polygon, MultiLineString, MultiPolygon
 from shapely.strtree import STRtree
 import geopandas as gpd
 import pandas as pd
-import gdal
+from osgeo import gdal
 import hdsrhipy
 import numpy as np
 import flopy
