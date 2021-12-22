@@ -11,7 +11,7 @@ dependencies:
   - sklearn=0.0
   - ipykernel=5.4.3
   - pymannkendall=1.4.2
-  - contextily-1.2.0
+  - contextily=1.2.0
   - ipywidgets=7.6.3
   - geopandas=0.8.2
   - rasterio=1.2.0
@@ -27,6 +27,5 @@ dependencies:
   - rioxarray=0.5.0
   - openpyxl=3.0.9
   - descartes=1.1.0
-  
-  
+
   

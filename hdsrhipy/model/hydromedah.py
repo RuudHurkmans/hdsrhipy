@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Sep 29 09:17:22 2021
+
+@author: HKV lijn in water 2021
+Contact: Ruud Hurkmans (hurkmans@hkv.nl)
+"""
+
 import imod
 from hdsrhipy import Runfile
 from hdsrhipy.model import rasters
@@ -34,13 +42,16 @@ class Hydromedah:
         self.rf = Runfile(os.path.join(self.data_path,'hdsr_ns.run'), data_path='$DBASE$\\', evap_path=evap_path, precip_path=precip_path)
         
      
-    def setup_model(self, start_date=None, end_date=None, resolution=None, metaswap_vars=None, add_surface_water=None, afw_shape = None):
+    def setup_model(self, start_date=None, end_date=None, resolution=None, metaswap_vars=None, add_surface_water=None, afw_shape = None, firstrun=False):
+        """ Functie om Hydromedah run voor te bereiden alle (tijd)-informatie goed te zetten"""
+        
         if resolution is None:
             resolution = 250.
         if metaswap_vars is None:
             metaswap_vars = ['ETact','S01','Ssd01', 'qinf']
-                
-        # util.prepare_raw_data(self.data_path)                
+        
+        if firstrun:
+            util.prepare_raw_data(self.data_path)                
         
         self.rf.to_version(4.3)
         self.rf.update_metaswap(datadir=self.data_path, start_date=pd.to_datetime(start_date), end_date=pd.to_datetime(end_date), metaswap_vars=metaswap_vars)
@@ -66,7 +77,8 @@ class Hydromedah:
         self.rf.data['ISAVE'][:] = 1          
         
                 
-    def run_model(self, model_path=None, use_summerlevel=None, use_winterlevel=None, silent=False):             
+    def run_model(self, model_path=None, use_summerlevel=None, use_winterlevel=None, silent=False):       
+        """ Functie om Hydromedah door te rekenen"""
         if model_path is None:
             model_path = self.data_path
         model_path = os.path.join(model_path, 'work', self.name)                
@@ -75,6 +87,7 @@ class Hydromedah:
 
     # inlezen .key-bestand
     def ReadKey(self, filename):
+        """ Functie om een SIMGRO key file in te lezen"""
         kf = open(filename+'.key','r')
         lines = kf.readlines()
         kf.close()
@@ -96,6 +109,8 @@ class Hydromedah:
         
     # inlezen .TIM bestand
     def ReadTim(self,filename):
+        """ Functie om een SIMGRO tim file in te lezen"""
+        
         tf =open(filename+'.tim','r')
         lines = tf.readlines()
         tf.close()
@@ -106,6 +121,7 @@ class Hydromedah:
     
     # haal tijdserie op een locatie op
     def GetTimeSeries(self, f,numtim,numlocs,numvar,loc, var ):    
+        """ Functie om een tijdserie op te halen uit een binair SIMGRO bestand (oud, V2 wordt gebruikt)"""
         f.seek(loc*numvar*4+var*4,0)
         timeserie = []
         for tim in range(numtim):
@@ -115,6 +131,7 @@ class Hydromedah:
         return timeserie
     
     def GetTimeSeries_V2(self,f,numtim,numlocs,numvar,loc,var,bytesize,timeindexfilter=None):
+        """ Functie om een tijdserie op te halen uit een binair SIMGRO bestand"""
         byte_index = range(var * bytesize, numtim * numlocs * numvar * bytesize, numlocs * numvar * bytesize)
         byte_index = [x + (loc * bytesize * numvar) for x in byte_index]
         # apply timeseries filter
@@ -129,7 +146,8 @@ class Hydromedah:
             timeserie[tim] = val
         return timeserie    
 
-    def Read_BDA(self, simgro_path,filename):             
+    def Read_BDA(self, simgro_path,filename):      
+        """ Functie om een binair SIMGRO bestand uit te lezen (oud, niet gebruikt)"""
         # maak lijsten van tijdstappen, variabelen en locaties
         if (filename=='sw_dtsw')|(filename=='sw_dtgw'): 
             var1 = 'Vdsreg'
@@ -164,7 +182,8 @@ class Hydromedah:
             # f.close()                  
         return(df)    
     
-    def Read_BDA_V2(self,simgro_path,filename,variables, bytesize=None, year_filter=None, locind=None):             
+    def Read_BDA_V2(self,simgro_path,filename,variables, bytesize=None, year_filter=None, locind=None):     
+        """ Functie om een binair SIMGRO bestand uit te lezen"""        
         (locations, variabelen, period, key_bytesize) =  self.ReadKey(os.path.join(simgro_path,filename))        
         (timesteps) = self.ReadTim(os.path.join(simgro_path,filename))
         if bytesize is None:
@@ -218,16 +237,18 @@ class Hydromedah:
         return(df)
 
     def read_laterals(self, model_path=None, model_name=None, msw_file=None):
+        """ Lateralen uitlezen uit SSIMGRO """
         if msw_file is None: 
             msw_file = 'sw_dtgw'
         if model_path is None:
-            model_path = data_path
+            model_path = self.data_path
         if model_name is None:
             model_name = self.name
         df = self.Read_BDA_V2(os.path.join(model_path,'work', model_name, 'output','metaswap'),msw_file,['Vdsreg','Vsues'], bytesize=8)             
         return df
 
     def cleanup(self,model_path=None, name=None, modflow_vars=None, modflow_layers=None, metaswap_files=None):    
+        """Opschonen Hydromedah-uitvoer"""
         if model_path is None:
             model_path = self.model_path
         if name is None:

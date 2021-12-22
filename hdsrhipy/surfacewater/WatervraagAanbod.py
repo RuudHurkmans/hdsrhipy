@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import geopandas as gpd
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 class WatervraagAanbod():

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 16 10:05:03 2021
+Created on Wed Sep 29 09:17:22 2021
 
-@author: hurkmans
+@author: HKV lijn in water 2021
+Contact: Ruud Hurkmans (hurkmans@hkv.nl)
 """
 import sys
 import os
@@ -40,7 +41,7 @@ class Maatgevend:
                 
         
     def subtract_seepage(self, mean_seepage = True, model_path = None, name=None):     
-        
+        """ Trek kwel af van de afvoer"""
         if name is None:
             name = self.name
         gw = Groundwater(model_path=model_path, name=name)
@@ -75,7 +76,8 @@ class Maatgevend:
                                                         
             self.laterals_nosp.to_csv(self.export_path / str('Laterals_nosp_dyn_'+self.name+'.csv'), sep=",")
         
-    def get_laterals(self, seepage_subtracted=True, mean_seepage=True):       
+    def get_laterals(self, seepage_subtracted=True, mean_seepage=True):    
+        """ Haal de lateralen op uit de CSV, al dan niet met kwel """
         if seepage_subtracted:
             if mean_seepage:
                 self.laterals_nosp = pd.read_csv(self.export_path / str('Laterals_nosp_av_'+self.name+'.csv'), sep=",")
@@ -89,6 +91,7 @@ class Maatgevend:
             self.laterals.drop(self.laterals.columns[0:2], axis=1,inplace=True)
             
     def process_timeseries(self, ts):
+        """Bereken de maatgevende afvoer/aanvoer uit een tijdreeks van netto fluxen"""
         times = [pd.Timestamp(ts.index[i]) for i in range(len(ts.index))]
         years = set([pd.Timestamp(ts.index[i]).year for i in range(len(ts.index))])
         timestep = (times[1]-times[0]).total_seconds()/3600.
@@ -107,6 +110,7 @@ class Maatgevend:
         return [rts1, mqaf, rts10, mqaan]
 
     def plot_location(self, nr, seepage_subtracted = True):         
+        """ plot alle informatie voor een locatie """
         afwid = self.afw.loc[self.afw.CODENR==int(nr),'CODE'].to_string(index=False)
         area = float(self.afw.loc[self.afw.CODENR==int(nr),'geometry'].area)
         m3s_to_mmd = area/(1000.*86400.)
@@ -143,6 +147,8 @@ class Maatgevend:
         plt.savefig(self.export_path /  str('MG_'+afwid+'_'+self.name+'.jpg'))
                    
     def get_q_norm(self, dataset=None):
+        """bereken maatgevende afvoer/aanvoer"""
+        
         mg_q = self.afw.copy(deep=True)
         keep = ['CODE','geometry','CODENR']
         for k in self.afw.columns:
@@ -167,11 +173,12 @@ class Maatgevend:
         return mg_q
         
     def export_shp(self, dataset, filename):
+        """Exporteer een shapefile"""
         filename =self.export_path / str(filename)
         dataset.to_file(filename)
                 
     def get_validation(self, afgid=None, afvoer=None, aanvoer=None):                
-        
+        """ Vergelijk met WIS data"""
         # read the shapefile of afvoergeibeden and extract the right one
         afg_shape = os.path.join(os.path.abspath('.'), '..','data','gis','Afvoergebieden.shp')                
         afg = gpd.read_file(afg_shape)

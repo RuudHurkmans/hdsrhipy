@@ -1,6 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Sep 29 09:17:22 2021
 
-#from hdsrhipy import Runfile
-#import hdsrhipy
+@author: HKV lijn in water 2021
+Contact: Ruud Hurkmans (hurkmans@hkv.nl)
+"""
+
 import sys
 import os
 from tqdm.auto import tqdm
@@ -31,13 +36,15 @@ class Groundwater:
             self.name=name                    
             
         
-    def get_heads_raster(self, mv_raster=None):               
+    def get_heads_raster(self, mv_raster=None): 
+        """ Haal de stijghoogtes op"""              
         head_folder = self.model_path / 'work' / self.name / 'output' / 'head'
         heads = imod.idf.open(head_folder / "head*_l1.idf")[:,0,:,:]       
                         
         self.heads = heads      
         
     def get_gxg_raster(self, dataset=None, mv_raster=None):
+        """Bereken de GxG's"""              
         if mv_raster is None:
             mv_raster = self.model_path / 'work' / self.name / 'maaiveld' / 'maaiveld_m.idf'
 
@@ -61,6 +68,7 @@ class Groundwater:
       
         
     def get_gt_raster(self, gxg=None):
+        """ Bepaal de grondwatertrap"""              
         if gxg is None:
             gxg = self.get_gxg()
         
@@ -101,15 +109,18 @@ class Groundwater:
         return gt
     
     def export_raster(self, dataset, filename):
+        """ Exporteer een raster"""              
         dataset.rio.to_raster(self.export_path / filename)        
         
     def get_seepage(self):
+        """ Haal de kwel/wegzijging op en zet om naar mm/d"""              
         seep_folder = self.model_path / 'work' / self.name / 'output' / 'bdgflf'
         seepage = imod.idf.open(seep_folder / "bdgflf*_l1.idf")[:,0,:,:]        
         return (1e3*seepage)/float(seepage['dx'])**2
         
     def seepage_season_means(self, dataset=None):
-    
+        """ Bereken seizoensgemiddelden"""              
+        
         time = [pd.Timestamp(dataset['time'].values[i]).month for i in range(len(dataset['time']))]
         season_means = []
         for s in range(6):
@@ -125,7 +136,8 @@ class Groundwater:
         return(season_means)
             
     
-    def prep_riverseep(self, offset=None, offset_name=None, seizoen=None, export_path=None):        
+    def prep_riverseep(self, offset=None, offset_name=None, seizoen=None, export_path=None): 
+        """ Overschrijf waarden in een raster binnen bepaalde shapfile"""              
         if export_path is None:
             export_path = self.export_path
         
@@ -145,7 +157,8 @@ class Groundwater:
     def get_diffseep(self, hydromedah_path=None, name=None):
         pass
        
-    def get_validation_data(self, validation_path=None, catalogue=None, timeseries=None, head_path=None):        
+    def get_validation_data(self, validation_path=None, catalogue=None, timeseries=None, head_path=None):  
+        """ Roep de scripts van Berendrecht Consultancy aan voor de peilbuisanalyse"""
         path = validation_path
         read_csv(path=path, catalogue_file=catalogue, timeseries_file=timeseries)   
 

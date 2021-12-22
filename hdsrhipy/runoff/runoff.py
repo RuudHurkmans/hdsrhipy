@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Sep 29 09:17:22 2021
+
+@author: HKV lijn in water 2021
+Contact: Ruud Hurkmans (hurkmans@hkv.nl)
+"""
+
 import sys
 import os
 from tqdm.auto import tqdm
@@ -31,14 +39,17 @@ class Runoff:
         self.name=name    
         
     def get_msw_var(self, variable=None):
+        """ Lees data uit een Metaswap uitvoermap"""
         msw_folder = self.model_path / 'work' / self.name / 'output' / 'metaswap' / variable
         var = imod.idf.open(msw_folder / "*_l1.idf")[:,0,:,:]       
         return var
         
     def get_mean(self, dataset):
+        """ Gemiddelde van dataset"""
         return dataset.mean(dim='time')
      
-    def get_season_stat(self, dataset=None,stat=None):        
+    def get_season_stat(self, dataset=None,stat=None):     
+        """ Seizoensgemiddelden van dataset"""
         time = [pd.Timestamp(dataset['time'].values[i]).month for i in range(len(dataset['time']))]
         season_means = []
         for s in range(2):
@@ -56,6 +67,7 @@ class Runoff:
     
     
     def aggregate_to_shapefile(self, dataset, shapefile=None,output_df = None, outcolid=None):
+        """ Rasterinformatie naar vector bestanden"""
         if output_df is None:
             output_df = shapefile
         else:
@@ -67,6 +79,7 @@ class Runoff:
              
     # functie om percentielen van hoogtemodel te berekenen 
     def compute_zonal_stats(self, fp_vector, fp_raster, stats):
+        """ Zonal stats voor AHN"""
         gdf = gpd.read_file(fp_vector)
         
         stats = zonal_stats(
@@ -81,6 +94,7 @@ class Runoff:
 
     #    functie om uitsnede bodemhoogtemodel op te slaan 
     def get_updated_meta(self, f, out_img, out_transform):
+        """ Raster meta-informatie"""
         out_meta = f.meta.copy()
         out_meta['transform'] = out_transform
         out_meta['compress'] = 'deflate'
@@ -91,7 +105,7 @@ class Runoff:
         return out_meta
     
     def ahn_analysis(self, ahndata=None,  bodemeenheden=None, percentage=None, bandbreedte=None, realisation=None):
-                
+        """ bepaal voor elke bodemfysische eenheid de statistieken uit een AHN  uitsnede op 0.5m"""
         # Geef id van de zone op waarbinnen de percentages berekend moet worden
         self.zonalid = 'OBJECTID' 
         

@@ -2,7 +2,8 @@
 """
 Created on Wed Sep 29 09:17:22 2021
 
-@author: hurkmans
+@author: HKV lijn in water 2021
+Contact: Ruud Hurkmans (hurkmans@hkv.nl)
 """
 
 import os
@@ -24,6 +25,7 @@ from hdsrhipy import Maatgevend
 from hdsrhipy import Runoff
 
 def bootstrap(data, nyear=None, n=3):
+    """Functie om willekeurig jaren te samplen volgens het bootstrap-principe"""
     if nyear is None:
         nyear = 8
     if hasattr(data,'time'):
@@ -53,7 +55,8 @@ def bootstrap(data, nyear=None, n=3):
         samples.append(outdat)
     return samples 
 
-def sample_nauwkeurigheid(data, bandbreedte, n=3):        
+def sample_nauwkeurigheid(data, bandbreedte, n=3):   
+    """Voeg noise toe aan een dataset uit een gegeven bandbreedte"""     
     samples = []
     for i in tqdm(range(n)):
         if len(data.shape)==3:
@@ -71,6 +74,7 @@ def sample_nauwkeurigheid(data, bandbreedte, n=3):
     return samples
 
 def MonteCarlo(variable, samples, bootstrap_n=3, n=3, model_path=None, model_name=None):
+    """ Bepaal producten op basis van een aantal samples op basis van nauwkeurigheid en bootstrap. De manier waarop hangt af van het dataformat van de data (raster vs shape)"""
     def makeds(arr, ref):
         ds = ref.copy(deep=True)
         ds.values = arr
