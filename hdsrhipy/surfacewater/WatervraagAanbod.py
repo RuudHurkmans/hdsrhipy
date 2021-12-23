@@ -33,6 +33,9 @@ class WatervraagAanbod():
         self.invoerdata['lsws'] = gpd.read_file(fNames['lsw'])
         self.invoerdata['afwateringseenheden'] = gpd.read_file(fNames['afwateringseenheden'])
         
+        # dissolve top10nl
+        self.invoerdata['top10nl'] = self.invoerdata['top10nl'].dissolve('typelandgebruik', as_index=False)
+        
         # lees mozart data
         self.inlezen_mozart_data(fNames)
         
@@ -133,16 +136,14 @@ class WatervraagAanbod():
     def bepaal_intersects(self):
         
         # intersection tussen lsw en schaalgebied
-        self.intersects['lsw_schaalgebied'] = gpd.overlay(self.invoerdata['lsw'],
-                                                          self.invoerdata['schaalgebied'])
+        self.intersects['lsw_schaalgebied'] = self.invoerdata['lsw'].overlay(self.invoerdata['schaalgebied'], how='intersection')
+
 
         # intersection tussen lsw's in schaalgebied en top10nl
-        self.intersects['lsw_schaalgebied_top10nl'] = gpd.overlay(self.intersects['lsw_schaalgebied'],
-                                                                  self.invoerdata['top10nl_gekoppeld'])
+        self.intersects['lsw_schaalgebied_top10nl'] = self.intersects['lsw_schaalgebied'].overlay(self.invoerdata['top10nl_gekoppeld'], how='intersection')
         
-        # intersection tussen lsw en top10nl
-        self.intersects['lsw_top10nl'] = gpd.overlay(self.invoerdata['lsw'],
-                                                     self.invoerdata['top10nl_gekoppeld'])
+        # intersection tussen lsw en top10nl       
+        self.intersects['lsw_top10nl'] = self.invoerdata['lsw'].overlay(self.invoerdata['top10nl_gekoppeld'], how='intersection')
         
         # dissolve intersection tussen lsw en top10nl
         self.intersects['lsw_top10nl_dissolved'] = self.intersects['lsw_top10nl'].dissolve('mozart_koppeling', as_index=False)
