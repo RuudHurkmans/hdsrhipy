@@ -775,7 +775,6 @@ def add_simgro_surface_water(rf, gdf_pg=None, run1period=True, change_conductanc
     # if gdf_pg is None:
     #     # download the layer with peilgebieden
     #     gdf_pg = hdsr.get_peilgebieden()
-    
     print('Starting flopy operations')
     # generate a flopy model to grid the peilgebieden
     ml = to_flopy(rf2, packages=['dis','lpf'], data_dir=datadir)
@@ -794,7 +793,7 @@ def add_simgro_surface_water(rf, gdf_pg=None, run1period=True, change_conductanc
     
     # mana_res.inp
     mana_res = pd.DataFrame({'swnr':gdf_sw.index,'ioma':2,'lvtasm':0.0,'lvtawt':0.0,'dptasu':0.01,
-                             'fxsuswsb':0.00346*gdf_sw['area_grid']})
+                            'fxsuswsb':0.00346*gdf_sw['area_grid']})
     rf.add_inp(mana_res,'simgro/mana_res.inp')
     
     # goto_res.inp
@@ -844,7 +843,7 @@ def add_simgro_surface_water(rf, gdf_pg=None, run1period=True, change_conductanc
     modfcell = svat2mod.loc[svat2swnr_roff['svat'],'modfcell']
     # calculate which swnr
     fname = os.path.join(model_ws,rf2.data['OUTPUTDIRECTORY'],'mf2005_tmp',
-                     '{}.dxc'.format(os.path.split(model_ws)[-1]))
+                    '{}.dxc'.format(os.path.split(model_ws)[-1]))
     lrc = pd.DataFrame(read_dxc(fname), columns=['l','r','c','modfcell'])
     lrc = lrc.set_index('modfcell')
     # from one-based to zero-based
@@ -891,7 +890,7 @@ def add_simgro_surface_water(rf, gdf_pg=None, run1period=True, change_conductanc
             wd = wl_mean['IWS_W_WATD'] # waterdiepte
             wd[wd.isna()] = 0
             svat2swnr_drng = cond2svat2swnr_drng(svat2swnr_drng, cond, wd, li, Bin, area_svat,
-                                                 svat2mod, grid_sw, goto_res, lrc, rf, ml, sy=cat)
+                                                svat2mod, grid_sw, goto_res, lrc, rf, ml, sy=cat)
         
     # add rivers
     for lay in [1]:# only the first layer
@@ -911,8 +910,10 @@ def add_simgro_surface_water(rf, gdf_pg=None, run1period=True, change_conductanc
                                         botm_file,area_svat,svat2mod,grid_sw,
                                         lrc,rf,ml,'DRN',sy=4,
                                         change_conductance=change_conductance, datadir=datadir)
-    rf.add_inp(svat2swnr_drng,'simgro/svat2swnr_drng.inp')
+    rf.add_inp(svat2swnr_drng,'simgro/svat2swnr_drng.inp')    
 
+    
+        
 def read_dxc(fname):
     f = open(fname, "r")
     l = f.readline()

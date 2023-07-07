@@ -244,7 +244,7 @@ def write(data,fname):
     elif name=='tiop_sim.inp':
         with open(fname,'w') as f:
             for idx,d in data.iterrows():
-                f.write(f"{d.td:15.2f}{d.iy:6g}{d.io:6g}\n")
+                f.write(f"{float(d.td):15.2f}{int(d.iy):6g}{int(d.io):6g}\n")
     else:
         fmt_dict = variable_format(name)
         for key in fmt_dict.keys():

@@ -425,7 +425,7 @@ class Runfile():
                 else:
                     f.write('{}\n'.format(fname))
             
-    def run_imodflow(self,model_ws,name,data_path=None,exefile=None,silent=False, use_summerlevel=None, use_winterlevel=None):  
+    def run_imodflow(self,model_ws,name,data_path=None,exefile=None,silent=False, use_summerlevel=None, use_winterlevel=None, use_existing_simgro=None):  
         """Run imodflow in the directory model_ws."""
         # prepare the model directory
         if not os.path.isdir(model_ws):
@@ -461,14 +461,17 @@ class Runfile():
         shutil.copyfile(exefile,exefile_new)
 
         # write the runfile
-        print('Write iModflow Runfile')
-        runfile=os.path.join(model_ws,name+'.run')
-        if self.version>3:
-            # use relative paths
-            self.write(runfile,data_path='.\\')
+        if use_existing_simgro is None:
+            print('Write iModflow Runfile')
+            runfile=os.path.join(model_ws,name+'.run')
+            if self.version>3:
+                # use relative paths
+                self.write(runfile,data_path='.\\')
+            else:
+                # relative paths are not allowed for older versions of iModflow
+                self.write(runfile,data_path=model_ws)
         else:
-            # relative paths are not allowed for older versions of iModflow
-            self.write(runfile,data_path=model_ws)
+            runfile=os.path.join(model_ws,name+'.run')
         
         # copy or extract the data-files
         if data_path is not None:
@@ -514,6 +517,7 @@ class Runfile():
                                     # or one of the other inp-files (DataFrame)
                                     fname = os.path.join(model_ws,file.index.name)  
                                     fname = fname.replace('/','\\')
+                                    print(fname)
                                     inp.write(file,fname)
                                 else:
                                     util.copy_data_file(data_path,model_ws,file)
@@ -681,12 +685,12 @@ class Runfile():
                 #     mg.iy = np.repeat(year,366)
                 #     mg.td = np.arange(366.)                    
                 # else:
-                ndays = len([p for p in preclist if str(year) in p])                    
+                ndays = len([p for p in preclist if pd.to_datetime(os.path.splitext(os.path.basename(p))[0].split('_')[1],format='%Y%m%d').year == year])                    
                 mg = mg.iloc[0:ndays,:]
                 mg.iy = np.repeat(year,ndays)
                 mg.td = np.arange(float(ndays))
-                mg.precgrid = [p for p in preclist if str(year) in p]
-                mg.etrefgrid = [e for e in evaplist if str(year) in e]
+                mg.precgrid = [p for p in preclist if pd.to_datetime(os.path.splitext(os.path.basename(p))[0].split('_')[1],format='%Y%m%d').year == year]
+                mg.etrefgrid = [e for e in evaplist if pd.to_datetime(os.path.splitext(os.path.basename(e))[0].split('_')[2],format='%Y%m%d').year == year]                
                 mete_grid.append(mg)
         else:
             raise(ValueError(f'{pathname} does not exist.'))

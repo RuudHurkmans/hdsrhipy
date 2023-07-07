@@ -71,18 +71,22 @@ class Hydromedah:
         if add_surface_water:
             gdf_pg = gpd.read_file(os.path.join(self.data_path, afw_shape+'.shp'))
             gdf_pg['CODENR'] = gdf_pg.index + 1                  
-            util.add_simgro_surface_water(self.rf, gdf_pg=gdf_pg, run1period=True, datadir=self.data_path)
+            util.add_simgro_surface_water(self.rf, gdf_pg=gdf_pg, run1period=False, datadir=self.data_path)
         
          # save output every timestep (every day)
         self.rf.data['ISAVE'][:] = 1          
         
                 
-    def run_model(self, model_path=None, use_summerlevel=None, use_winterlevel=None, silent=False):       
+    def run_model(self, model_path=None, use_summerlevel=None, use_winterlevel=None, silent=False,use_existing_simgro=None):       
         """ Functie om Hydromedah door te rekenen"""
         if model_path is None:
             model_path = self.data_path
-        model_path = os.path.join(model_path, 'work', self.name)                
-        self.rf.run_imodflow(model_path, self.name, data_path=self.data_path, use_summerlevel=use_summerlevel, use_winterlevel=use_winterlevel, silent=silent)
+        model_path = os.path.join(model_path, 'work', self.name)         
+        if use_existing_simgro is not None:
+            if not (Path(model_path) / 'simgro').exists():
+                shutil.copytree(use_existing_simgro / 'simgro', Path(model_path) / 'simgro')
+            shutil.copy(use_existing_simgro / str(self.name + '.run'), Path(model_path) / str(self.name + '.run'))
+        self.rf.run_imodflow(model_path, self.name, data_path=self.data_path, use_summerlevel=use_summerlevel, use_existing_simgro=use_existing_simgro, use_winterlevel=use_winterlevel, silent=silent)
         
 
     # inlezen .key-bestand
