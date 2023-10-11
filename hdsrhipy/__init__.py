@@ -14,5 +14,6 @@ from hdsrhipy.groundwater.groundwater import Groundwater
 from hdsrhipy.surfacewater.maatgevend import Maatgevend
 from hdsrhipy.surfacewater.WatervraagAanbod  import WatervraagAanbod
 from hdsrhipy.runoff.runoff import Runoff
+from hdsrhipy.runoff.flowstats import FlowStats
 from hdsrhipy.core.logging import initialize_logger
 initialize_logger()

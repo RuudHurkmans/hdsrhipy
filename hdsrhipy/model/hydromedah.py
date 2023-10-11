@@ -25,7 +25,7 @@ from pathlib import Path
 class Hydromedah:
     
     """ Methods to set-up and run the Hydromedah model"""
-    def __init__(self, hydromedah_path=None, name=None, precip_path=None, evap_path=None):
+    def __init__(self, hydromedah_path=None, name=None, runfile_template="hdsr_ns.run", precip_path=None, evap_path=None):
         
         if hydromedah_path is not None:
             self.data_path = hydromedah_path    
@@ -39,10 +39,10 @@ class Hydromedah:
             evap_path = hydromedah_path
         
         self.name = name
-        self.rf = Runfile(os.path.join(self.data_path,'hdsr_ns.run'), data_path='$DBASE$\\', evap_path=evap_path, precip_path=precip_path)
-        
+        self.rf = Runfile(os.path.join(self.data_path, runfile_template), data_path='$DBASE$\\', evap_path=evap_path, precip_path=precip_path)  
+
      
-    def setup_model(self, start_date=None, end_date=None, resolution=None, metaswap_vars=None, add_surface_water=None, afw_shape = None, firstrun=False):
+    def setup_model(self, start_date=None, end_date=None, resolution=None, metaswap_vars=None, add_surface_water=None, afw_shape = None, firstrun=False, use_existing_simgro=None):
         """ Functie om Hydromedah run voor te bereiden alle (tijd)-informatie goed te zetten"""
         
         if resolution is None:
@@ -74,19 +74,26 @@ class Hydromedah:
             util.add_simgro_surface_water(self.rf, gdf_pg=gdf_pg, run1period=False, datadir=self.data_path)
         
          # save output every timestep (every day)
-        self.rf.data['ISAVE'][:] = 1          
+        self.rf.data['ISAVE'][:] = 1    
+        
+        # add simgro
+        if use_existing_simgro is not None:
+            simgro_data_path = Path(self.data_path) / 'simgro'
+            if not simgro_data_path.exists():
+                shutil.copytree(use_existing_simgro, simgro_data_path)
+            for inp_file in (simgro_data_path).glob("*.inp"):
+                print(f'adding simgro-file to run-file: {inp_file.name}')
+                # add to run-file
+                idx = len(self.rf.data["CAP"]["files"]) + 1
+                self.rf.data['CAP']['files'].loc[idx, 'FNAME'] = f'.\simgro\{inp_file.name}'
         
                 
-    def run_model(self, model_path=None, use_summerlevel=None, use_winterlevel=None, silent=False,use_existing_simgro=None):       
+    def run_model(self, model_path=None, use_summerlevel=None, use_winterlevel=None, silent=False):       
         """ Functie om Hydromedah door te rekenen"""
         if model_path is None:
             model_path = self.data_path
         model_path = os.path.join(model_path, 'work', self.name)         
-        if use_existing_simgro is not None:
-            if not (Path(model_path) / 'simgro').exists():
-                shutil.copytree(use_existing_simgro / 'simgro', Path(model_path) / 'simgro')
-            shutil.copy(use_existing_simgro / str(self.name + '.run'), Path(model_path) / str(self.name + '.run'))
-        self.rf.run_imodflow(model_path, self.name, data_path=self.data_path, use_summerlevel=use_summerlevel, use_existing_simgro=use_existing_simgro, use_winterlevel=use_winterlevel, silent=silent)
+        self.rf.run_imodflow(model_path, self.name, data_path=self.data_path, use_summerlevel=use_summerlevel, use_winterlevel=use_winterlevel, silent=silent)
         
 
     # inlezen .key-bestand
@@ -250,6 +257,118 @@ class Hydromedah:
             model_name = self.name
         df = self.Read_BDA_V2(os.path.join(model_path,'work', model_name, 'output','metaswap'),msw_file,['Vdsreg','Vsues'], bytesize=8)             
         return df
+
+    def laterals2sobek(self, csv_path=None, template_path=None, sobek_path=None, reaches_to_adjust=None):        
+        """
+        laterals2sobek Convert laterals from Hydromedah to a SOBEK lateral.dat.
+
+        The lateral.dat is filled from a template provided by 'template_path'
+
+        Args:
+            csv_path (str): path to HYDROMEAH laterals in csv format.
+            template_path (str)): path where Sobek templates are stored (LATERAL.DAT, 3b_nod.shp, 3b_link.shp, afvoeren.csv). Defaults to None.
+            sobek_path (str): output LATERAL.DAT
+            reaches_to_adjust (dct): bij sommige reaches treden problemen op 
+        """
+
+        dfafvoeren = pd.read_csv(os.path.join(template_path, 'afvoeren.csv'),sep=',')
+        lateralids = 'drain' + dfafvoeren.columns[1:]
+        outlatf = open(sobek_path,'w')
+
+        gdf_reach = gpd.read_file(os.path.join(template_path, '3b_link.shp'))
+        gdf_node  = gpd.read_file(os.path.join(template_path, '3b_nod.shp'))
+
+        #We filteren onderstaande reaches: Dit zijn de knelpunten met veel iteraties.
+        if reaches_to_adjust is None:
+            reaches_to_adjust = {'H013921_1':['PG0599-1','PG0034-1','PG2177-1'],
+                                    'kw_H000315_2_1':['PG2160-3','PG2160-5','PG2151-3'],
+                                    'H044390_1':['PG0756-1','PG0778-1'],
+                                    'kw_H065397_s1':['PG0557-1'],
+                                    'H006663_1_s3': ['PG2064-2', 'PG006-2']                    
+                                }                     
+            
+        #Reverse mapping
+        laterals_aanpassen = {}
+        for reach,laterals in reaches_to_adjust.items():
+            for lateral in laterals:
+                laterals_aanpassen[lateral] = reach
+
+        print('Reading input...')
+        data = pd.read_csv(csv_path,sep=",")
+        data = data.drop('0',axis=1)
+        data.columns = dfafvoeren.columns
+        locs = data.columns[1:].to_list()        
+
+        # read lateral.dat        
+        with open(os.path.join(template_path, 'LATERAL_REF.DAT'),'r') as f:
+            lats = f.readlines()
+        
+        droogval_orig = 0.001
+        droogval_extra = 0.02
+
+
+        for lat in lats:     
+            rational=False
+            lat_id = lat.split(' ')[2].lstrip("'drain").rstrip("'")        
+                     
+            if lat_id in laterals_aanpassen:
+                if lat_id not in locs:
+                    print(f'Try to adjust {lat_id}, but it is not in Hydromedah output.')
+                    rational=True
+
+            if lat_id in locs:  
+           
+              
+                timeseries = data[lat_id]
+                timeseries.index = data.iloc[:,0]
+               
+                lines = []
+                latvec = lat.split(' ')
+                header = ' '.join([latvec[i] for i in range(9)])
+                header = header+" 1 0 0\n"        
+                lines.append(header)
+                lines.append('TBLE\n')
+
+            
+                if lat_id in laterals_aanpassen.keys():
+                    reach = laterals_aanpassen[lat_id]
+                    dist_reach = gdf_reach.loc[gdf_reach['ID        '] == reach].geometry.values[0].distance(gdf_node.loc[gdf_node['ID        '] == 'drain'+lat_id].geometry.values[0])
+                    print('Extra droogval toepassen voor lat_id {} (gekoppeld aan reach {} distance = {:.2f} m'.format(lat_id,reach,dist_reach))
+                    droogval = droogval_extra            
+                else:
+                    droogval = droogval_orig
+                if lat_id == 'PG0026-3':
+                    print(f'Kromme rijn debiet of 4.0 applied to {lat_id}')
+                    droogval = 4.0
+                    
+                for itim, tim in enumerate(timeseries.items()):   
+                    if itim==0:
+                        continue
+                    time = dt.strftime(dt.strptime(tim[0],"%Y-%m-%d"),"'%Y/%m/%d;%H:%M:%S' ")
+
+                    if float(tim[1]) < -900.0:
+                        value = str(droogval)
+                    else:
+                        value = str(np.round(float(tim[1]),4)+droogval)
+                    lines.append(time+value+' <\n')
+                    
+                lines.append('tble flbr\n')
+                outlatf.writelines(lines)          
+            else:
+                if rational==True:            
+                    latvec = lat.split(' ')
+                    latvec[9] = '6'
+                    latvec[11] = str(droogval_extra)
+                    lines = ' '.join([latvec[i] for i in range(len(latvec))])
+                    print(f'Extra droogval toepassen voor {lat_id} based on rational method')
+                    outlatf.write(lines)            
+                else:                    
+                    outlatf.write(lat)            
+        outlatf.close()
+        
+
+
+
 
     def cleanup(self,model_path=None, name=None, modflow_vars=None, modflow_layers=None, metaswap_files=None):    
         """Opschonen Hydromedah-uitvoer"""

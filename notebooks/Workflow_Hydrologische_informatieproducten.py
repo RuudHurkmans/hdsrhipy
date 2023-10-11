@@ -47,7 +47,7 @@ scenario_path = os.path.abspath('../data/scenarios')
 data_path = os.path.abspath('../data/')
 
 # De locatie waar de informatieproducten worden geplaastst.
-export_path = os.path.abspath('../results')
+export_path = r'D:\4569.20\hdsrhipy_compleet\results\Maatgevend'
 
 
 # Laad een aantal externe benodigde bibliotheken en de klassen van het hdsrhipy-pakket.
@@ -83,6 +83,7 @@ from hdsrhipy import Groundwater
 from hdsrhipy import Maatgevend
 from hdsrhipy import WatervraagAanbod
 from hdsrhipy import Runoff
+from hdsrhipy import FlowStats
 from hdsrhipy.core.nauwkeurigheid import *
 
 
@@ -188,28 +189,56 @@ if True:
     # hydromedah = Hydromedah(data_path=hydromedah_path, name=name, precip_path=os.path.join(scenario_path,'RD85GH'), evap_path=os.path.join(scenario_path,'EV85GH'))
     
     # zet het model klaar met deze eigenschappen. Het ruimtelijke domein is hard gecodeerd naar het HDSR-gebied.     
-    hydromedah.setup_model(   start_date='2011-01-01', 
-                               end_date='2011-12-31', 
-                               resolution=250., 
-                               add_surface_water=False, 
-                               afw_shape = 'Afwateringseenheden', 
-                               metaswap_vars = msw_vars,
-                               firstrun=False) # dit alleen True als het de eerste run is, hiermee wordt de database uitgepakt.
+    # hydromedah.setup_model(   start_date='2011-01-01', 
+    #                            end_date='2011-12-31', 
+    #                            resolution=250., 
+    #                            add_surface_water=False, 
+    #                            afw_shape = 'Afwateringseenheden', 
+    #                            metaswap_vars = msw_vars,
+    #                            use_existing_simgro=Path(hydromedah_path) / 'use_simgro',
+    #                            firstrun=False) # dit alleen True als het de eerste run is, hiermee wordt de database uitgepakt.
         
-    hydromedah.run_model(model_path=hydromedah_path, silent=True, use_existing_simgro=Path(hydromedah_path) / 'use_simgro')
+    # hydromedah.run_model(model_path=hydromedah_path, silent=True)
 
     # haal de lateralen op uit het model... 
-    laterals = hydromedah.read_laterals(model_path=hydromedah_path, model_name=name, msw_file='sw_dtgw')
+    # laterals = hydromedah.read_laterals(model_path=hydromedah_path, model_name=name, msw_file='sw_dtgw')
 
     # en schrijf ze naar een csv.
-    laterals.to_csv(os.path.join(export_path,'Maatgevend','laterals_'+name+'.csv'),sep=",")
+    # laterals.to_csv(os.path.join(export_path,'Maatgevend','laterals_'+name+'.csv'),sep=",")
     
     # Modeluitvoer is groot en we hebben lang niet alles nodig.  
     # Specifeer de variabelen en lagen die BEWAARD moeten blijven. Uit metaswap worden enkele grote CSV's en resterende binaire bestanden verwijderd.
-    hydromedah.cleanup(model_path=hydromedah_path, name=name, 
-                       modflow_vars = ['head','bdgflf'], 
-                       modflow_layers = [1], 
-                       metaswap_files = ['sw_dtgw'])                 
+    # hydromedah.cleanup(model_path=hydromedah_path, name=name, 
+    #                    modflow_vars = ['head','bdgflf'], 
+    #                    modflow_layers = [1], 
+    #                    metaswap_files = ['sw_dtgw'])                 
+
+    # laterals to lateral.dat
+    template_path = 'D:/4569.20/omzetten'
+    sobek_path = 'LATERAL.DAT'
+    csv_path  = os.path.join(export_path,'laterals_'+name+'.csv')
+    reaches_to_adjust = {'H013921_1':['PG0599-1','PG0034-1','PG2177-1'],
+                                    'kw_H000315_2_1':['PG2160-3','PG2160-5','PG2151-3'],
+                                    'H044390_1':['PG0756-1','PG0778-1'],
+                                    'kw_H065397_s1':['PG0557-1'],
+                                    'H006663_1_s3': ['PG2064-2', 'PG006-2']                    
+                                }   
+    # hydromedah.laterals2sobek(csv_path=csv_path, template_path=template_path, sobek_path=sobek_path,reaches_to_adjust=reaches_to_adjust)
+
+    cases = [1,2]
+    # maanden in het jaar om statistiek over te berekenen
+    period = pd.date_range(start=pd.Timestamp('1900-05-15'),end=pd.Timestamp('1900-09-15'), freq='D')
+    
+    
+    overschrijdingsduur_van_debiet = {'name': 'Ex5-9_005',  'value': 0.05}
+    relatieve_overschrijdingsduur_van_debiet = {'name': 'REx5-9_005',  'value': 0.05}
+    debiet_bij_tijdpercentiel = {'name': 'Q5-9_80%',  'value': 0.8}
+    
+
+    flowstats = FlowStats(sobek_path=r'D:\4569.20\testout_sobek\MOD_DEF_V4.lit', template_path=template_path, export_path=os.path.join(export_path, 'flowstats.shp'))
+    flowstats.get_flowstats(cases2join=cases, period=period, overschrijdingsduur_van_debiet=overschrijdingsduur_van_debiet, relatieve_overschrijdingsduur_van_debiet=relatieve_overschrijdingsduur_van_debiet,debiet_bij_tijdpercentiel=debiet_bij_tijdpercentiel)
+# debietstatistieken
+
 
 
 # <a id='mozart'/>
@@ -1003,6 +1032,7 @@ if runoff:
 
 
 # In[ ]:
+
 
 
 

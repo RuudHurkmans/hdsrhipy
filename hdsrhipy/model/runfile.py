@@ -425,7 +425,7 @@ class Runfile():
                 else:
                     f.write('{}\n'.format(fname))
             
-    def run_imodflow(self,model_ws,name,data_path=None,exefile=None,silent=False, use_summerlevel=None, use_winterlevel=None, use_existing_simgro=None):  
+    def run_imodflow(self,model_ws,name,data_path=None,exefile=None,silent=False, use_summerlevel=None, use_winterlevel=None):  
         """Run imodflow in the directory model_ws."""
         # prepare the model directory
         if not os.path.isdir(model_ws):
@@ -461,17 +461,15 @@ class Runfile():
         shutil.copyfile(exefile,exefile_new)
 
         # write the runfile
-        if use_existing_simgro is None:
-            print('Write iModflow Runfile')
-            runfile=os.path.join(model_ws,name+'.run')
-            if self.version>3:
-                # use relative paths
-                self.write(runfile,data_path='.\\')
-            else:
-                # relative paths are not allowed for older versions of iModflow
-                self.write(runfile,data_path=model_ws)
+        print('Write iModflow Runfile')
+        runfile=os.path.join(model_ws,name+'.run')
+        if self.version>3:
+            # use relative paths
+            self.write(runfile,data_path='.\\')
         else:
-            runfile=os.path.join(model_ws,name+'.run')
+            # relative paths are not allowed for older versions of iModflow
+            self.write(runfile,data_path=model_ws)
+
         
         # copy or extract the data-files
         if data_path is not None:
