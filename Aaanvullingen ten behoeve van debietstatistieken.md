@@ -47,7 +47,8 @@ Hierbij is:
 Vervolgens worden de statistieken uitgerekend met de functie "get_flowstats()": 
 ```{python}
 flowstats.get_flowstats(cases2join=cases, period=period, overschrijdingsduur_van_debiet=overschrijdingsduur_van_debiet, relatieve_overschrijdingsduur_van_debiet=relatieve_overschrijdingsduur_van_debiet,debiet_bij_tijdpercentiel=debiet_bij_tijdpercentiel)
-'''
+```
+
 waarbij "cases" de lijst van SObek-cases is waarvan de HIS-uitvoer moet worden samengevoegd. De andere argumenten geven de periode waarover statistieken worden uitgerekend en de parameters ervan:
 
 ```{python}
